@@ -57,6 +57,10 @@ Hệ thống được xây dựng trên một nền tảng công nghệ đồng 
 -   **Flexible Scoping**: Cấu hình học kỳ linh hoạt, áp dụng cho toàn hệ thống hoặc từng đơn vị lớp cụ thể.
 -   **Data Migration**: Nhập xuất dữ liệu hàng loạt qua Excel với công cụ xử lý dữ liệu (Bulk Import/Export) tối ưu.
 
+### 4. Phân quyền tài khoản
+-   **Flexible Scoping**: Cấu hình quyền hạn linh hoạt, áp dụng cho toàn hệ thống hoặc từng đơn vị lớp cụ thể.
+
+
 ---
 
 ## 📂 Cấu trúc Hệ thống (System Structure)
