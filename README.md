@@ -6,23 +6,43 @@
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
 
-**Hệ thống Quản lý Sinh viên (QLSV)** là giải pháp phần mềm cấp doanh nghiệp được thiết kế để chuẩn hóa và tự động hóa quy trình quản lý học thuật, đánh giá rèn luyện và theo dõi chuyên cần. Dự án tập trung vào trải nghiệm người dùng cao cấp (Premium UX), bảo mật dữ liệu và hiệu năng tối ưu trên quy mô lớn.
+**Hệ thống Quản lý Sinh viên (QLSV)** là giải pháp phần mềm được thiết kế để chuẩn hóa và tự động hóa quy trình quản lý học thuật, đánh giá rèn luyện và theo dõi chuyên cần. Dự án tập trung vào trải nghiệm người dùng cao cấp (Premium UX), bảo mật dữ liệu và hiệu năng tối ưu.
 
 ---
 
-## 💎 Điểm nổi bật về công nghệ (Technical Excellence)
+## 💎 Kiến trúc Công nghệ Chi tiết (Detailed Tech Stack)
 
-Hệ thống kế thừa sức mạnh từ các công nghệ hiện đại nhất:
+Hệ thống được xây dựng trên một nền tảng công nghệ đồng bộ, đảm bảo tính ổn định và hiệu suất cao nhất:
 
--   **Frontend Architecture**: Kiến trúc Atomic Component dựa trên React 18, kết hợp với Tailwind CSS cho phép tùy biến giao diện linh hoạt (Glassmorphism UI). Sử dụng Vite cho tốc độ bundle cực nhanh.
--   **State Management**: Quản lý trạng thái tập trung với Zustand, giảm thiểu việc re-render không cần thiết, tối ưu hóa bộ nhớ trình duyệt.
--   **Backend Core**: Xây dựng trên nền tảng Node.js/Express với mô hình kiến trúc Layered Architecture (Controller - Service - Repository), đảm bảo tính mở rộng và dễ bảo trì.
--   **Data Integrity**: Sử dụng Prisma ORM kết hợp với Database (MySQL/Postgres) mạnh mẽ, đảm bảo tính nhất quán của dữ liệu qua các Transaction phức tạp.
--   **Evidence Storage**: Tích hợp hệ thống lưu trữ Cloudflare R2 (S3-compatible) cho phép xử lý hàng nghìn tệp minh chứng với độ trễ thấp và bảo mật cao.
+
+### 🎨 Frontend - Giao diện & Trải nghiệm
+- **Ngôn ngữ Core**: [TypeScript](https://www.typescriptlang.org/) - Đảm bảo an toàn kiểu dữ liệu (Type-safe) và giảm thiểu lỗi logic trong quá trình phát triển.
+- **Thư viện chính**: [React 18](https://react.dev/) - Tận dụng sức mạnh của Concurrent Mode và Hooks để tối ưu hóa hiệu năng rendering.
+- **Build Tool**: [Vite](https://vitejs.dev/) - Công cụ đóng gói mã nguồn thế hệ mới, cho phép Hot Module Replacement (HMR) cực nhanh.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) - Framework CSS tiện ích giúp xây dựng giao diện tùy biến, responsive và tối ưu dung lượng tệp CSS đầu ra.
+- **Quản lý trạng thái**: [Zustand](https://zustand-demo.pmnd.rs/) - Giải pháp quản lý state gọn nhẹ nhưng mạnh mẽ, thay thế cho Redux cồng kềnh.
+- **Thành phần bổ trợ**:
+  - `Lucide React`: Bộ icon vector sắc nét, đồng bộ.
+  - `React Router Dom v6`: Quản lý điều hướng trang linh hoạt.
+  - `React Hot Toast`: Hệ thống thông báo (notifications) mượt mà.
+  - `Axios`: Xử lý các yêu cầu HTTP API với cơ chế Interceptor bảo mật.
+
+### ⚙️ Backend - Xử lý & Nghiệp vụ
+- **Runtime**: [Node.js](https://nodejs.org/) - Môi trường chạy JavaScript phía máy chủ với hiệu suất xử lý bất đồng bộ (I/O) vượt trội.
+- **Framework**: [Express.js](https://expressjs.com/) - Framework tối giản, linh hoạt cho việc xây dựng RESTful APIs chuyên nghiệp.
+- **Database ORM**: [Prisma](https://www.prisma.io/) - Công cụ quản lý cơ sở dữ liệu thế hệ mới, tự động hóa việc tạo migration và cung cấp Type-safe Client.
+- **Bảo mật & Xác thực**:
+  - `JWT (JSON Web Token)`: Cơ chế xác thực không trạng thái (stateless) an toàn.
+  - `bcrypt`: Thuật toán mã hóa mật khẩu một chiều cấp độ quân đội.
+  - `CORS`: Cấu hình chia sẻ tài nguyên giữa các nguồn gốc khác nhau.
+- **Lưu trữ**: Tích hợp Cloudflare R2 (S3-Compatible) hoặc File System tùy biến.
+
+### 📊 Cơ sở dữ liệu (Database)
+- Hỗ trợ tốt nhất trên **MySQL 8.0** hoặc **PostgreSQL**, được thiết kế chuẩn hóa để xử lý các truy vấn quan hệ phức tạp giữa Sinh viên, Học kỳ và Điểm rèn luyện.
 
 ---
 
-## 🛠️ Hệ thống Tính năng Đẳng cấp
+## 🛠️ Hệ thống Tính năng 
 
 ### 1. Phân hệ Điểm rèn luyện (DRL Evaluation)
 -   **Cơ chế đánh giá đa tầng**: Sinh viên tự chấm -> Lớp kiểm tra -> Admin phê duyệt.
@@ -101,7 +121,7 @@ npm run dev
 > 2. **Sử dụng thương mại**: Việc sử dụng dự án cho mục đích thương mại mà không có giấy phép hợp lệ là vi phạm pháp luật.
 > 3. **Bảo mật**: Mọi hành vi xâm nhập trái phép hoặc can thiệp vào mã nguồn nhằm mục đích phá hoại sẽ bị xử lý theo quy định.
 
-**© 2024 LÊ KHÁNH DUY. All Rights Reserved.**
+**© 2026 LÊ KHÁNH DUY. All Rights Reserved.**
 
 ---
 
@@ -110,6 +130,6 @@ npm run dev
 Mọi thắc mắc về bản quyền, hỗ trợ kỹ thuật hoặc yêu cầu tùy biến hệ thống, vui lòng liên hệ qua:
 
 -   **Tác giả**: Lê Khánh Duy
--   **Vai trò**: Fullstack Developer / System Architect
--   **Email**: [duy.le@example.com]
--   **Dự án**: Hệ thống QLSV v2.0
+-   **Vai trò**: 
+-   **Email**: [toi05022020@gmail.com]
+-   **Dự án**: Hệ thống QLSV v1.0
