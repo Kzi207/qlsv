@@ -69,7 +69,8 @@ function App() {
           <Route path="classes" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><Classes /></RoleRoute>} />
           <Route path="semesters" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><Semesters /></RoleRoute>} />
           <Route path="accounts" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><AccountManagement /></RoleRoute>} />
-          <Route path="attendance/manage" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><QRAttendanceManager /></RoleRoute>} />
+          <Route path="attendance/manage/class" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><QRAttendanceManager type="QR_CLASS" /></RoleRoute>} />
+          <Route path="attendance/manage/activity" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><QRAttendanceManager type="ACTIVITY" /></RoleRoute>} />
           <Route path="training/approval" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><TrainingScoreApproval /></RoleRoute>} />
 
           {/* ADMIN ONLY ROUTES */}

@@ -49,6 +49,10 @@ Hệ thống được xây dựng trên một nền tảng công nghệ đồng 
 -   **Evidence Management**: Hệ thống quản lý minh chứng thông minh, cho phép upload đa định dạng.
 -   **Premium Viewer**: Trình xem ảnh/PDF tích hợp Portal, hỗ trợ xoay, thu phóng và điều hướng mượt mà không làm gián đoạn luồng làm việc.
 
+#### Tài liệu nghiệp vụ minh chứng
+-   Xem quy trình nộp và duyệt minh chứng tại [docs/evidence-flow.md](docs/evidence-flow.md).
+-   Tài liệu này mô tả endpoint backend, luồng frontend và payload tương ứng trong source code hiện tại.
+
 ### 2. Phân hệ Chuyên cần QR (Smart Attendance)
 -   **Dynamic QR Generation**: Mã QR được tạo động theo thời gian thực và vị trí lớp học.
 -   **Security Check-in**: Ngăn chặn gian lận điểm danh qua cơ chế xác thực phiên làm việc.
@@ -98,7 +102,7 @@ qlsv/
 ```bash
 cd backend
 npm install
-# Cấu hình file .env dựa trên .env.example (DATABASE_URL, JWT_SECRET, R2_CONFIG)
+# Cấu hình file .env dựa trên .env.example (DATABASE_URL, JWT_SECRET, R2_CONFIG, PORT=5000)
 npx prisma generate
 npx prisma db push
 npm run dev

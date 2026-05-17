@@ -118,21 +118,28 @@ model Attendance {
 }
 
 model AttendanceSession {
-  id          Int          @id @default(autoincrement())
-  title       String
-  subject     String       @default("")
-  class_id    String?
-  qrToken     String       @unique
-  lat         Float
-  lng         Float
-  radius      Float
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  endedAt     DateTime?
-  sessionDate DateTime     @default(now())
-  attendances Attendance[]
-  class       Class?       @relation(fields: [class_id], references: [name], onDelete: Cascade)
+  id                Int          @id @default(autoincrement())
+  session_type      String       @default("QR_CLASS")
+  title             String
+  subject           String       @default("")
+  class_id          String?
+  qrToken           String       @unique
+  lat               Float
+  lng               Float
+  radius            Float
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  endedAt           DateTime?
+  sessionDate       DateTime     @default(now())
+  check_in_start_at DateTime?
+  check_in_end_at   DateTime?
+  drl_section_id    String?
+  drl_criterion_id  String?
+  drl_points        Int?
+  drl_semester_id   String?
+  attendances       Attendance[]
+  class             Class?       @relation(fields: [class_id], references: [name], onDelete: Cascade)
 }
 
 model StudentAttendanceProfile {

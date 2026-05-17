@@ -8,6 +8,7 @@ interface CriteriaRowProps {
   studentScore?: number;
   adminScore?: number;
   evidence: any[];
+  activities?: Array<{ activityName: string; points: number; checkedInAt: string }>;
   isAdminMode?: boolean;
   onStudentScoreChange?: (val?: number) => void;
   onAdminScoreChange?: (val?: number) => void;
@@ -20,6 +21,7 @@ const CriteriaRow: React.FC<CriteriaRowProps> = ({
   studentScore,
   adminScore,
   evidence,
+  activities = [],
   isAdminMode,
   onStudentScoreChange,
   onAdminScoreChange,
@@ -76,6 +78,17 @@ const CriteriaRow: React.FC<CriteriaRowProps> = ({
            </div>
         </div>
 
+        {activities.length > 0 && (
+          <div className="space-y-1.5 rounded-xl border border-emerald-100 bg-emerald-50/60 p-2">
+            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Hoat dong da cong diem</p>
+            {activities.map((activity, idx) => (
+              <p key={`${activity.checkedInAt}-${idx}`} className="text-[10px] font-semibold text-emerald-800">
+                +{activity.points}d - {activity.activityName}
+              </p>
+            ))}
+          </div>
+        )}
+
         {isAdminMode && (
           <div className="flex gap-1.5 pt-0.5">
              <button
@@ -124,6 +137,19 @@ const CriteriaRow: React.FC<CriteriaRowProps> = ({
             disabled={isAdminMode}
             className="!mt-2"
           />
+
+          {activities.length > 0 && (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Hoat dong da cong diem</p>
+              <div className="mt-1 space-y-1">
+                {activities.map((activity, idx) => (
+                  <p key={`${activity.checkedInAt}-${idx}`} className="text-[11px] font-semibold text-emerald-800">
+                    +{activity.points}d - {activity.activityName}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Score & Actions Column */}

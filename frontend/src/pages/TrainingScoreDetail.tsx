@@ -18,6 +18,7 @@ import {
   type EvidenceFile,
   normalizeEvidenceList,
 } from '../utils/evidence';
+import { normalizeTrainingActivities } from '../utils/trainingActivities';
 import PreviewModal from '../components/drl/PreviewModal';
 
 type PopupState = {
@@ -256,6 +257,7 @@ const TrainingScoreDetail = () => {
                     {section.criteria.map((criterion) => {
                       const studentScore = Number(data.details?.[criterion.id]?.score || 0);
                       const files = normalizeEvidenceList(data.details?.[criterion.id]?.files || []);
+                      const activities = normalizeTrainingActivities(data.details?.[criterion.id]?.activities || []);
                       const currentAdminScore = Number(adminScores[criterion.id] || 0);
 
                       return (
@@ -268,6 +270,18 @@ const TrainingScoreDetail = () => {
                           <td className="px-6 py-5">
                             <p className="text-sm font-bold text-slate-800 leading-snug">{criterion.content}</p>
                             <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{criterion.guide}</p>
+                            {activities.length > 0 && (
+                              <div className="mt-2 space-y-1 rounded-xl border border-emerald-100 bg-emerald-50/60 px-2 py-1.5">
+                                {activities.map((activity, activityIndex) => (
+                                  <p
+                                    key={`${activity.checkedInAt}-${activityIndex}`}
+                                    className="text-[10px] font-bold text-emerald-700"
+                                  >
+                                    +{activity.points}d - {activity.activityName}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-5">
                             {files.length > 0 ? (
@@ -313,6 +327,7 @@ const TrainingScoreDetail = () => {
                  {section.criteria.map((criterion) => {
                     const studentScore = Number(data.details?.[criterion.id]?.score || 0);
                     const files = normalizeEvidenceList(data.details?.[criterion.id]?.files || []);
+                    const activities = normalizeTrainingActivities(data.details?.[criterion.id]?.activities || []);
                     const currentAdminScore = Number(adminScores[criterion.id] || 0);
 
                     return (
@@ -347,6 +362,19 @@ const TrainingScoreDetail = () => {
                                 </div>
                              </div>
                           </div>
+
+                          {activities.length > 0 && (
+                            <div className="space-y-1 rounded-xl border border-emerald-100 bg-emerald-50/60 p-2">
+                              {activities.map((activity, activityIndex) => (
+                                <p
+                                  key={`${activity.checkedInAt}-${activityIndex}`}
+                                  className="text-[10px] font-bold text-emerald-700"
+                                >
+                                  +{activity.points}d - {activity.activityName}
+                                </p>
+                              ))}
+                            </div>
+                          )}
 
                           <div className="flex gap-2">
                              <button onClick={() => setAdminScores(p => ({...p, [criterion.id]: studentScore}))} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${currentAdminScore === studentScore ? 'bg-emerald-500 text-white shadow-lg' : 'bg-emerald-50 text-emerald-600'}`}>

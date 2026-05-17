@@ -9,6 +9,87 @@ import {
   normalizeSemesterName,
 } from '../utils/semester';
 
+const parseDetails = (raw: unknown): Record<string, any> => {
+  let parsed: unknown = raw;
+  for (let i = 0; i < 3; i += 1) {
+    if (typeof parsed !== 'string') break;
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      break;
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  return parsed as Record<string, any>;
+};
+
+const normalizeStoredFiles = (raw: unknown) => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (typeof item === 'string') return { path: item };
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const filePath = typeof record.path === 'string' ? record.path : '';
+      if (!filePath) return null;
+      return {
+        path: filePath,
+        name: typeof record.name === 'string' ? record.name : undefined,
+        size: typeof record.size === 'number' ? record.size : undefined,
+      };
+    })
+    .filter(Boolean);
+};
+
+const normalizeStoredActivities = (raw: unknown) => {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item) => item && typeof item === 'object');
+};
+
+const mergeDetailsWithExistingActivities = (existingRaw: unknown, incomingRaw: unknown) => {
+  const existing = parseDetails(existingRaw);
+  const incoming = parseDetails(incomingRaw);
+  const keys = new Set([...Object.keys(existing), ...Object.keys(incoming)]);
+  const merged: Record<string, any> = {};
+
+  keys.forEach((criterionId) => {
+    const existingCriterion =
+      existing[criterionId] && typeof existing[criterionId] === 'object'
+        ? (existing[criterionId] as Record<string, unknown>)
+        : {};
+    const incomingCriterion =
+      incoming[criterionId] && typeof incoming[criterionId] === 'object'
+        ? (incoming[criterionId] as Record<string, unknown>)
+        : {};
+
+    const incomingScore = Number(incomingCriterion.score);
+    const existingScore = Number(existingCriterion.score);
+    const resolvedScore = Number.isFinite(incomingScore)
+      ? incomingScore
+      : Number.isFinite(existingScore)
+        ? existingScore
+        : 0;
+
+    const hasIncomingFiles = Array.isArray(incomingCriterion.files);
+    const hasIncomingActivities = Array.isArray(incomingCriterion.activities);
+
+    merged[criterionId] = {
+      ...existingCriterion,
+      ...incomingCriterion,
+      score: resolvedScore,
+      files: hasIncomingFiles
+        ? normalizeStoredFiles(incomingCriterion.files)
+        : normalizeStoredFiles(existingCriterion.files),
+      activities: hasIncomingActivities
+        ? normalizeStoredActivities(incomingCriterion.activities)
+        : normalizeStoredActivities(existingCriterion.activities),
+    };
+  });
+
+  return merged;
+};
+
 export const createOrUpdateTrainingScore = async (req: Request, res: Response) => {
   const { student_id, semester: semesterName, y_thuc, hoat_dong, ky_luat } = req.body;
   const total = y_thuc + hoat_dong + ky_luat;
@@ -128,6 +209,7 @@ export const createTrainingScore = async (req: AuthRequest, res: Response) => {
       },
       orderBy: { createdAt: 'desc' },
     });
+    const mergedDetails = mergeDetailsWithExistingActivities(existingScore?.details, details);
 
     // Allow students to edit even if approved, as long as submission window is open
     // (We rely on resolveSubmissionStatus which is checked above)
@@ -148,7 +230,7 @@ export const createTrainingScore = async (req: AuthRequest, res: Response) => {
           hoat_dong = ${hd},
           ky_luat = ${kl},
           total = ${cappedTotal},
-          details = ${details ? JSON.stringify(details) : '{}'}::jsonb,
+          details = ${JSON.stringify(mergedDetails)}::jsonb,
           status = ${status || 'PENDING'},
           admin_y_thuc = NULL,
           admin_hoat_dong = NULL,
@@ -176,7 +258,7 @@ export const createTrainingScore = async (req: AuthRequest, res: Response) => {
             hoat_dong: hd,
             ky_luat: kl,
             total: cappedTotal,
-            details: details || {},
+            details: mergedDetails,
             status: status || 'PENDING',
           },
           include: {

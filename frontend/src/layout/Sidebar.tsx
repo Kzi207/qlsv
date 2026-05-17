@@ -36,7 +36,9 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
     {
       label: 'Hoạt động',
       items: [
-        { name: 'Điểm danh QR', path: isAdmin || isBch ? '/attendance/manage' : '/attendance/scan', icon: QrCode, roles: ['STUDENT', 'ADMIN', 'BCH'] },
+        { name: 'Điểm danh QR', path: '/attendance/scan', icon: QrCode, roles: ['STUDENT'] },
+        { name: 'Điểm danh QR học phần', path: '/attendance/manage/class', icon: QrCode, roles: ['ADMIN', 'BCH'] },
+        { name: 'Điểm danh hoạt động', path: '/attendance/manage/activity', icon: QrCode, roles: ['ADMIN', 'BCH'] },
         { name: 'Nộp phiếu DRL', path: '/training/evaluation/self', icon: ClipboardCheck, roles: ['STUDENT'] },
         { name: 'Quản lý DRL', path: '/drl', icon: ClipboardCheck, roles: ['ADMIN', 'BCH'] },
       ]

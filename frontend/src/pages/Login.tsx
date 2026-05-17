@@ -20,7 +20,10 @@ const Login = () => {
       const res = await api.post('/auth/login', { username, password });
       login(res.data.user);
       toast.success('Chào mừng trở lại!');
-      navigate('/');
+      
+      const params = new URLSearchParams(window.location.search);
+      const redirectPath = params.get('redirect') || '/';
+      navigate(redirectPath, { replace: true });
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Đăng nhập thất bại');
     } finally {

@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { EVALUATION_DATA } from '../constants/evaluationData';
 import type { Section } from '../constants/evaluationData';
 import { normalizeEvidenceList } from '../utils/evidence';
+import { normalizeTrainingActivities } from '../utils/trainingActivities';
 import BottomBar from './drl/BottomBar';
 import CriteriaRow from './drl/CriteriaRow';
 import PreviewModal from './drl/PreviewModal';
@@ -37,6 +38,7 @@ const DetailedEvaluationForm: React.FC<Props> = ({
   const [scores, setScores] = useState<Record<string, number | undefined>>({});
   const [adminScores, setAdminScores] = useState<Record<string, number | undefined>>({});
   const [evidence, setEvidence] = useState<Record<string, any[]>>({});
+  const [activities, setActivities] = useState<Record<string, any[]>>({});
   const [expandedSections, setExpandedSections] = useState<string[]>(['sec-1']);
   const [previewData, setPreviewData] = useState<{ files: any[]; initialIndex: number; criterionId: string } | null>(null);
 
@@ -44,18 +46,22 @@ const DetailedEvaluationForm: React.FC<Props> = ({
     const studentScoreMap: Record<string, number | undefined> = {};
     const adminScoreMap: Record<string, number | undefined> = {};
     const evidenceMap: Record<string, any[]> = {};
+    const activityMap: Record<string, any[]> = {};
 
     EVALUATION_DATA.forEach((section) => {
       section.criteria.forEach((criterion) => {
         if (studentDetails?.[criterion.id]) {
           studentScoreMap[criterion.id] = Number(studentDetails[criterion.id].score || 0);
           evidenceMap[criterion.id] = normalizeEvidenceList(studentDetails[criterion.id].files || []);
+          activityMap[criterion.id] = normalizeTrainingActivities(studentDetails[criterion.id].activities || []);
         } else if (initialData?.scores?.[criterion.id] !== undefined) {
           studentScoreMap[criterion.id] = Number(initialData.scores[criterion.id] || 0);
           evidenceMap[criterion.id] = normalizeEvidenceList(initialData.evidence?.[criterion.id] || []);
+          activityMap[criterion.id] = normalizeTrainingActivities(initialData.activities?.[criterion.id] || []);
         } else {
           studentScoreMap[criterion.id] = undefined;
           evidenceMap[criterion.id] = [];
+          activityMap[criterion.id] = [];
         }
 
         if (adminData?.[criterion.id] !== undefined) {
@@ -71,6 +77,7 @@ const DetailedEvaluationForm: React.FC<Props> = ({
     setScores(studentScoreMap);
     setAdminScores(adminScoreMap);
     setEvidence(evidenceMap);
+    setActivities(activityMap);
   }, [studentDetails, adminData, initialData, isAdminMode]);
 
   const toggleSection = (id: string) => {
@@ -174,7 +181,11 @@ const DetailedEvaluationForm: React.FC<Props> = ({
 
     const details: Record<string, any> = {};
     Object.keys(normalizedScores).forEach((id) => {
-      details[id] = { score: normalizedScores[id], files: evidence[id] || [] };
+      details[id] = {
+        score: normalizedScores[id],
+        files: evidence[id] || [],
+        activities: activities[id] || [],
+      };
     });
 
     onSubmit({
@@ -207,6 +218,7 @@ const DetailedEvaluationForm: React.FC<Props> = ({
                 studentScore={scores[criterion.id]}
                 adminScore={adminScores[criterion.id]}
                 evidence={evidence[criterion.id] || []}
+                activities={activities[criterion.id] || []}
                 isAdminMode={isAdminMode}
                 onStudentScoreChange={(value) => setScores((prev) => ({ ...prev, [criterion.id]: value }))}
                 onAdminScoreChange={(value) => setAdminScores((prev) => ({ ...prev, [criterion.id]: value }))}

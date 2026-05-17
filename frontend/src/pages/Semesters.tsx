@@ -70,12 +70,31 @@ const Semesters = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name.trim()) return toast.error('Tên học kỳ không được để trống');
+    const name = formData.name.trim().toUpperCase();
+    if (!name) return toast.error('Tên học kỳ không được để trống');
+    
+    // 1. Check for duplicates
+    const isDuplicate = semesters.some(s => s.name === name && (!editingSemester || editingSemester.name !== name));
+    if (isDuplicate) return toast.error('Học kỳ này đã tồn tại trong hệ thống');
+
+    // 2. Validate date range
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(formData.startDate).getTime();
+      const end = new Date(formData.endDate).getTime();
+      if (start > end) {
+        return toast.error('Thời gian bắt đầu phải nhỏ hơn hoặc bằng thời gian kết thúc');
+      }
+    }
+
+    // 3. Validate class selection for class-scoped semesters
+    if (!formData.isGlobal && formData.classNames.length === 0) {
+      return toast.error('Học kỳ áp dụng theo lớp phải chọn ít nhất 1 lớp');
+    }
     
     try {
       if (editingSemester) {
         await api.put(`/semesters/${editingSemester.name}`, {
-          newName: formData.name.trim().toUpperCase(),
+          newName: name,
           startDate: formData.startDate || null,
           endDate: formData.endDate || null,
           isGlobal: formData.isGlobal,
@@ -84,7 +103,7 @@ const Semesters = () => {
         toast.success('Đã cập nhật học kỳ');
       } else {
         await api.post('/semesters', {
-          name: formData.name.trim().toUpperCase(),
+          name: name,
           startDate: formData.startDate || null,
           endDate: formData.endDate || null,
           isGlobal: formData.isGlobal,
