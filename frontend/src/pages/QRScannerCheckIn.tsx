@@ -60,6 +60,7 @@ const QRScannerCheckIn = () => {
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [statusText, setStatusText] = useState('Sẵn sàng quét mã QR');
+  const [checkInError, setCheckInError] = useState(false);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const locationRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -68,6 +69,7 @@ const QRScannerCheckIn = () => {
   const isRequestingLocationRef = useRef(false);
   const hasAutoSubmittedRef = useRef(false);
   const startScannerRef = useRef<() => Promise<void>>(async () => {});
+  const isStartingRef = useRef(false);
 
   useEffect(() => {
     locationRef.current = location;
@@ -183,6 +185,7 @@ const QRScannerCheckIn = () => {
       isProcessingRef.current = true;
       setLoading(true);
       setStatusText('Đang gửi dữ liệu điểm danh lên máy chủ...');
+      setCheckInError(false);
 
       if (scannerRef.current && scannerRef.current.isScanning) {
         try {
@@ -221,8 +224,11 @@ const QRScannerCheckIn = () => {
         toast.error(msg, { duration: 6000 });
         setStatusText(msg);
 
+        setCheckInError(true);
         isProcessingRef.current = false;
-        hasAutoSubmittedRef.current = false;
+        if (!prefilledQrToken) {
+          hasAutoSubmittedRef.current = false;
+        }
         setLoading(false);
 
         if (!prefilledQrToken) {
@@ -234,12 +240,15 @@ const QRScannerCheckIn = () => {
   );
 
   const startScanner = useCallback(async () => {
+    if (isStartingRef.current) return;
     try {
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode('reader');
       }
 
       if (scannerRef.current.isScanning) return;
+
+      isStartingRef.current = true;
 
       const config = {
         fps: 15,
@@ -262,8 +271,13 @@ const QRScannerCheckIn = () => {
       setHasPermission(true);
     } catch (err) {
       console.error('Scanner Error:', err);
-      setHasPermission(false);
-      setStatusText('Không thể truy cập camera. Vui lòng cho phép quyền camera.');
+      const errMsg = String((err as any)?.message || err || '');
+      if (!errMsg.includes('already under transition') && !errMsg.includes('Device in use')) {
+        setHasPermission(false);
+        setStatusText('Không thể truy cập camera. Vui lòng cho phép quyền camera.');
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   }, [handleCheckIn]);
 
@@ -280,8 +294,21 @@ const QRScannerCheckIn = () => {
     requestLocation();
 
     return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch((e) => console.error('Stop fail', e));
+      if (scannerRef.current) {
+        const stopScannerSafe = async () => {
+          for (let i = 0; i < 10; i++) {
+            if (!isStartingRef.current) break;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          if (scannerRef.current && scannerRef.current.isScanning) {
+            try {
+              await scannerRef.current.stop();
+            } catch (e) {
+              console.error('Stop fail', e);
+            }
+          }
+        };
+        void stopScannerSafe();
       }
     };
   }, [prefilledQrToken, startScanner, requestLocation]);
@@ -312,7 +339,7 @@ const QRScannerCheckIn = () => {
       <div className="rounded-3xl border border-slate-100 bg-gradient-to-br from-white via-slate-50/50 to-slate-100 p-5 shadow-sm sm:p-6 hover:border-slate-200 transition-all">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase px-2.5 py-1 rounded-full border border-indigo-100">
                 Sinh Viên Check-In
               </span>
@@ -362,24 +389,43 @@ const QRScannerCheckIn = () => {
                     </p>
                   </div>
 
-                  {/* GPS Loading inside Prefill */}
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
-                    <div className="flex items-center justify-between text-[11px] text-slate-300">
-                      <span>Trạng thái GPS của bạn:</span>
-                      <span className={`font-black ${location ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`}>
-                        {location ? 'ĐÃ KHỚP ✅' : 'ĐANG DÒ GPS...⏳'}
-                      </span>
+                  {checkInError ? (
+                    <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 space-y-3">
+                      <p className="text-xs font-black text-rose-400 uppercase tracking-wider">Điểm danh thất bại</p>
+                      <p className="text-[11px] text-slate-300 leading-relaxed font-medium">
+                        {statusText}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckInError(false);
+                          void handleCheckIn(prefilledQrToken);
+                        }}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 text-xs font-black text-white active:scale-95 transition-all shadow-md"
+                      >
+                        <RefreshCcw size={12} /> Thử Lại Ngay
+                      </button>
                     </div>
-                    {location ? (
-                      <div className="text-[10px] text-slate-400 font-mono">
-                        Lat: {location.lat.toFixed(5)} | Lng: {location.lng.toFixed(5)}
+                  ) : (
+                    /* GPS Loading inside Prefill */
+                    <div className="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-slate-300">
+                        <span>Trạng thái GPS của bạn:</span>
+                        <span className={`font-black ${location ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`}>
+                          {location ? 'ĐÃ KHỚP ✅' : 'ĐANG DÒ GPS...⏳'}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-indigo-500 h-full w-2/3 rounded-full animate-infinite-loading" />
-                      </div>
-                    )}
-                  </div>
+                      {location ? (
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          Lat: {location.lat.toFixed(5)} | Lng: {location.lng.toFixed(5)}
+                        </div>
+                      ) : (
+                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-indigo-500 h-full w-2/3 rounded-full animate-infinite-loading" />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="pt-2">
                     <button
@@ -411,9 +457,10 @@ const QRScannerCheckIn = () => {
               {/* Permission denied Overlay */}
               {hasPermission === false && (
                 <motion.div
+                  key="permission-denied"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-955/98 p-6 text-center text-white"
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/98 p-6 text-center text-white"
                 >
                   <AlertCircle className="mb-4 h-14 w-14 text-rose-500 animate-pulse" />
                   <h4 className="text-lg font-black tracking-tight">Không Có Quyền Truy Cập Camera 📷</h4>
@@ -432,10 +479,11 @@ const QRScannerCheckIn = () => {
               {/* API Processing / Checkin loading overlay */}
               {loading && (
                 <motion.div
+                  key="loading-overlay"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 p-6 text-center"
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white p-6 text-center"
                 >
                   <div className="relative flex items-center justify-center">
                     <Loader2 className="h-16 w-16 animate-spin text-indigo-600" />
@@ -449,6 +497,7 @@ const QRScannerCheckIn = () => {
               {/* SUCCESS OVERLAY */}
               {success && (
                 <motion.div
+                  key="success-overlay"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600 p-6 text-center text-white"

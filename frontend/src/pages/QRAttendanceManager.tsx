@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Users,
   XCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api/axios';
@@ -136,6 +137,7 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [markingManual, setMarkingManual] = useState<number | null>(null);
   const [mapInput, setMapInput] = useState('');
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [classFilter, setClassFilter] = useState('');
@@ -334,6 +336,25 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
     );
   };
 
+  const handleManualCheckIn = async (studentId: number, targetStatus: 'present' | 'absent') => {
+    if (!selectedSessionId) return;
+    setMarkingManual(studentId);
+    try {
+      await api.post('/attendance/sessions/manual', {
+        sessionId: selectedSessionId,
+        studentId,
+        status: targetStatus,
+      });
+      toast.success(targetStatus === 'present' ? 'Điểm danh thủ công thành công!' : 'Đã hủy điểm danh!');
+      await fetchSummary(selectedSessionId, true);
+      await fetchSessions();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi điểm danh thủ công');
+    } finally {
+      setMarkingManual(null);
+    }
+  };
+
   const handleCreateSession = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -420,6 +441,25 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Khong the ket thuc phien');
+    }
+  };
+
+  const handleExportExcel = async (sessionId: number, sessionTitle: string) => {
+    const loadToast = toast.loading('Đang khởi tạo file Excel...');
+    try {
+      const res = await api.get(`/attendance/sessions/${sessionId}/export`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `diem-danh-${sessionTitle.toLowerCase().replace(/\s+/g, '-')}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Tải danh sách điểm danh dạng Excel thành công!', { id: loadToast });
+    } catch (err: any) {
+      toast.error('Lỗi khi xuất file Excel', { id: loadToast });
     }
   };
 
@@ -935,20 +975,28 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
                     </div>
                   )}
 
-                  <div className="mt-5 flex gap-3">
+                  <div className="mt-5 flex flex-wrap gap-2.5">
                     <button
                       type="button"
                       onClick={() => fetchSummary(selectedSession.id)}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
+                      className="inline-flex flex-1 min-w-[100px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
                     >
                       <RefreshCw size={14} />
                       Làm mới
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExportExcel(selectedSession.id, selectedSession.title)}
+                      className="inline-flex flex-1 min-w-[100px] items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-all cursor-pointer shadow-sm"
+                    >
+                      <FileSpreadsheet size={14} />
+                      Xuất Excel
                     </button>
                     {selectedSession.isActive && (
                       <button
                         type="button"
                         onClick={() => handleEndSession(selectedSession.id)}
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700"
+                        className="inline-flex flex-1 min-w-[100px] items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 hover:bg-red-100 transition-all cursor-pointer"
                       >
                         <XCircle size={14} />
                         Kết thúc
@@ -1008,10 +1056,18 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
                   </div>
 
                   <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
-                    <div className="border-b border-slate-100 px-5 py-4">
+                    <div className="border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/20">
                       <h4 className="font-bold text-slate-800">
                         {summary.session.class_id ? `Danh sách sinh viên của lớp ${summary.session.class_id}` : 'Danh sách sinh viên tham gia'}
                       </h4>
+                      <button
+                        type="button"
+                        onClick={() => handleExportExcel(summary.session.id, summary.session.title)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4.5 py-2 text-xs font-black text-white hover:bg-emerald-700 transition-all cursor-pointer shadow-md shadow-emerald-500/10 active:scale-95 whitespace-nowrap self-start sm:self-auto uppercase tracking-widest"
+                      >
+                        <FileSpreadsheet size={13} />
+                        Xuất file Excel
+                      </button>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm">
@@ -1034,15 +1090,35 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
                               </td>
                               <td className="px-4 py-4">
                                 {student.attendance ? (
-                                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                                    <CheckCircle2 size={14} />
-                                    Đã điểm danh
-                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                                      <CheckCircle2 size={14} />
+                                      Đã điểm danh
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleManualCheckIn(student.id, 'absent')}
+                                      disabled={markingManual === student.id}
+                                      className="rounded-lg bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1 text-[11px] font-bold transition-all disabled:opacity-50"
+                                    >
+                                      Hủy
+                                    </button>
+                                  </div>
                                 ) : (
-                                  <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
-                                    <XCircle size={14} />
-                                    Chưa điểm danh
-                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
+                                      <XCircle size={14} />
+                                      Chưa điểm danh
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleManualCheckIn(student.id, 'present')}
+                                      disabled={markingManual === student.id}
+                                      className="rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-2.5 py-1 text-[11px] font-bold transition-all disabled:opacity-50"
+                                    >
+                                      Điểm danh
+                                    </button>
+                                  </div>
                                 )}
                               </td>
                               <td className="px-4 py-4 text-slate-500">
