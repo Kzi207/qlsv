@@ -1355,7 +1355,15 @@ export const exportSessionAttendanceExcel = async (req: AuthRequest, res: Respon
         include: { student: true },
         orderBy: [{ date: 'asc' }],
       });
-      students = attendances.map((a) => a.student);
+      
+      // Filter out null student objects and deduplicate students safely
+      const uniqueStudentsMap = new Map();
+      attendances.forEach((a) => {
+        if (a.student) {
+          uniqueStudentsMap.set(a.student.id, a.student);
+        }
+      });
+      students = Array.from(uniqueStudentsMap.values());
     }
 
     const attendanceMap = new Map(attendances.map((att) => [att.student_id, att]));
@@ -1387,11 +1395,11 @@ export const exportSessionAttendanceExcel = async (req: AuthRequest, res: Respon
       const attendance = attendanceMap.get(student.id);
       sheet.addRow({
         stt: index + 1,
-        student_code: student.student_code,
-        name: student.name,
-        class_id: student.class_id,
+        student_code: student.student_code || 'N/A',
+        name: student.name || 'N/A',
+        class_id: student.class_id || 'N/A',
         status: attendance ? 'Đã điểm danh' : 'Chưa điểm danh',
-        time: attendance ? new Date(attendance.date).toLocaleString('vi-VN') : '--',
+        time: (attendance && attendance.date) ? new Date(attendance.date).toLocaleString('vi-VN') : '--',
         ipAddress: attendance ? (attendance.ipAddress === 'manual' ? 'Thủ công' : attendance.ipAddress || 'N/A') : '--',
         verifiedLocation: attendance
           ? attendance.verifiedLocation
