@@ -462,13 +462,14 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
       const res = await api.get(`/attendance/sessions/${sessionId}/export`, {
         responseType: 'blob'
       });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const url = window.URL.createObjectURL(res.data);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `diem-danh-${sessionTitle.toLowerCase().replace(/\s+/g, '-')}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Tải danh sách điểm danh dạng Excel thành công!', { id: loadToast });
     } catch (err: any) {
       toast.error('Lỗi khi xuất file Excel', { id: loadToast });
