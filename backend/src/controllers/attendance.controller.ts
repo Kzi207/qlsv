@@ -1,16 +1,9 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
-import prisma from '../utils/prisma';
-import { normalizeSemesterName } from '../utils/semester';
-
-// Extends AuthRequest if needed
-interface AuthRequest extends Request {
-  user?: {
-    studentId?: number;
-    role?: string;
-    class_id?: string;
-  };
-}
+import prisma from '../utils/prisma.js';
+import { normalizeSemesterName } from '../utils/semester.js';
+import type { AuthRequest } from '../types/index.js';
 
 interface QrAwardActivity {
   source: 'QR_ATTENDANCE';
@@ -24,6 +17,14 @@ interface QrAwardActivity {
 const EARTH_RADIUS_METERS = 6371e3;
 const criterionIdRegex = /^\d+\.\d+$/;
 const sectionIdRegex = /^sec-[1-5]$/i;
+
+const isPrismaUniqueViolation = (error: unknown, fields: string[]) => {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code !== 'P2002') return false;
+  const target = (error.meta as { target?: unknown })?.target;
+  if (!Array.isArray(target)) return false;
+  return fields.every((field) => target.includes(field));
+};
 
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const phi1 = (lat1 * Math.PI) / 180;
@@ -879,6 +880,9 @@ export const qrCheckIn = async (req: AuthRequest, res: Response) => {
       trainingAward: transactionResult.trainingAward,
     });
   } catch (error) {
+    if (isPrismaUniqueViolation(error, ['student_id', 'session_id'])) {
+      return res.status(409).json({ message: 'Sinh vien da diem danh cho phien nay' });
+    }
     console.error('qrCheckIn error:', error);
     return res.status(500).json({ message: 'Server error' });
   }
@@ -1076,5 +1080,335 @@ export const endAttendanceSession = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('endAttendanceSession error:', error);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const manualSessionCheckIn = async (req: AuthRequest, res: Response) => {
+  const { sessionId, studentId, status } = req.body;
+  const numericSessionId = Number(sessionId);
+  const numericStudentId = Number(studentId);
+
+  if (!Number.isFinite(numericSessionId) || numericSessionId <= 0) {
+    return res.status(400).json({ message: 'Session ID khong hop le' });
+  }
+  if (!Number.isFinite(numericStudentId) || numericStudentId <= 0) {
+    return res.status(400).json({ message: 'Student ID khong hop le' });
+  }
+
+  try {
+    const session = await prisma.attendanceSession.findUnique({
+      where: { id: numericSessionId },
+    });
+    if (!session) {
+      return res.status(404).json({ message: 'Khong tim thay phien diem danh' });
+    }
+
+    const accessError = ensureSessionAccess(req, session.class_id);
+    if (accessError) {
+      return res.status(accessError.status).json({ message: accessError.message });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: numericStudentId },
+    });
+    if (!student) {
+      return res.status(404).json({ message: 'Khong tim thay sinh vien' });
+    }
+
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        student_id: numericStudentId,
+        session_id: numericSessionId,
+      },
+    });
+
+    if (status === 'absent') {
+      // Revert/Delete Attendance
+      if (!existingAttendance) {
+        return res.json({ message: 'Sinh vien chua tung diem danh' });
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // Delete attendance record
+        await tx.attendance.delete({
+          where: { id: existingAttendance.id },
+        });
+
+        // Revert DRL if needed
+        const criterionId = String(session.drl_criterion_id || '').trim();
+        const sectionId = String(session.drl_section_id || '').trim().toLowerCase();
+        const semesterId = normalizeSemesterName(session.drl_semester_id);
+        const awardPoints = Number(session.drl_points || 0);
+
+        if (
+          criterionIdRegex.test(criterionId) &&
+          sectionIdRegex.test(sectionId) &&
+          semesterId &&
+          Number.isFinite(awardPoints) &&
+          awardPoints > 0
+        ) {
+          const existingScore = await tx.trainingScore.findFirst({
+            where: {
+              student_id: numericStudentId,
+              semester_id: semesterId,
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (existingScore) {
+            const details = parseDetails(existingScore.details);
+            const currentCriterion =
+              details[criterionId] && typeof details[criterionId] === 'object' ? details[criterionId] : {};
+            const existingFiles = normalizeStoredFiles(currentCriterion.files);
+            const existingActivities = normalizeQrActivities(currentCriterion.activities);
+
+            // Filter out this session's activity
+            const filteredActivities = existingActivities.filter(
+              (item) => item.sessionId !== session.id && item.attendanceId !== existingAttendance.id,
+            );
+
+            const wasApplied = existingActivities.length !== filteredActivities.length;
+            const newScore = wasApplied ? Math.max(0, Number(currentCriterion.score || 0) - awardPoints) : Number(currentCriterion.score || 0);
+
+            details[criterionId] = {
+              ...currentCriterion,
+              score: newScore,
+              files: existingFiles,
+              activities: filteredActivities,
+            };
+
+            const totals = computeTrainingTotalsFromDetails(details);
+            await tx.trainingScore.update({
+              where: { id: existingScore.id },
+              data: {
+                details,
+                y_thuc: totals.y_thuc,
+                hoat_dong: totals.hoat_dong,
+                ky_luat: totals.ky_luat,
+                total: totals.total,
+              },
+            });
+          }
+        }
+      });
+
+      return res.json({ message: 'Da xoa diem danh' });
+    } else {
+      // Mark as Present
+      if (existingAttendance) {
+        return res.json({ message: 'Sinh vien da diem danh roi' });
+      }
+
+      await prisma.$transaction(async (tx) => {
+        const attendance = await tx.attendance.create({
+          data: {
+            student_id: numericStudentId,
+            session_id: session.id,
+            status: 'present',
+            ipAddress: 'manual',
+            latitude: 0,
+            longitude: 0,
+            deviceInfo: 'manual_admin',
+            baselineCreated: false,
+            verifiedIp: true,
+            verifiedLocation: true,
+            profileDistance: 0,
+            sessionDistance: 0,
+          },
+        });
+
+        const criterionId = String(session.drl_criterion_id || '').trim();
+        const sectionId = String(session.drl_section_id || '').trim().toLowerCase();
+        const semesterId = normalizeSemesterName(session.drl_semester_id);
+        const awardPoints = Number(session.drl_points || 0);
+
+        if (
+          criterionIdRegex.test(criterionId) &&
+          sectionIdRegex.test(sectionId) &&
+          semesterId &&
+          Number.isFinite(awardPoints) &&
+          awardPoints > 0
+        ) {
+          const existingScore = await tx.trainingScore.findFirst({
+            where: {
+              student_id: numericStudentId,
+              semester_id: semesterId,
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          const details = parseDetails(existingScore?.details);
+          const currentCriterion =
+            details[criterionId] && typeof details[criterionId] === 'object' ? details[criterionId] : {};
+          const existingFiles = normalizeStoredFiles(currentCriterion.files);
+          const existingActivities = normalizeQrActivities(currentCriterion.activities);
+          const activityName = String(session.title || session.subject || 'Hoat dong QR').trim();
+
+          const qrActivity = {
+            source: 'QR_ATTENDANCE' as const,
+            attendanceId: attendance.id,
+            sessionId: session.id,
+            activityName: activityName || 'Hoat dong QR',
+            points: awardPoints,
+            checkedInAt: attendance.date.toISOString(),
+          };
+
+          const previousScore = Number(currentCriterion.score || 0);
+          const nextScore = previousScore + awardPoints;
+          const mergedActivities = [...existingActivities, qrActivity];
+
+          details[criterionId] = {
+            ...currentCriterion,
+            score: nextScore,
+            files: existingFiles,
+            activities: mergedActivities,
+          };
+
+          const totals = computeTrainingTotalsFromDetails(details);
+          if (existingScore) {
+            await tx.trainingScore.update({
+              where: { id: existingScore.id },
+              data: {
+                details,
+                y_thuc: totals.y_thuc,
+                hoat_dong: totals.hoat_dong,
+                ky_luat: totals.ky_luat,
+                total: totals.total,
+                status: 'PENDING',
+                admin_y_thuc: null,
+                admin_hoat_dong: null,
+                admin_ky_luat: null,
+                admin_total: null,
+                admin_details: null as any,
+                admin_notes: null,
+              },
+            });
+          } else {
+            await tx.trainingScore.create({
+              data: {
+                student_id: numericStudentId,
+                semester_id: semesterId,
+                y_thuc: totals.y_thuc,
+                hoat_dong: totals.hoat_dong,
+                ky_luat: totals.ky_luat,
+                total: totals.total,
+                status: 'PENDING',
+                details,
+              },
+            });
+          }
+        }
+      });
+
+      return res.json({ message: 'Da diem danh thu cong' });
+    }
+  } catch (error) {
+    if (isPrismaUniqueViolation(error, ['student_id', 'session_id'])) {
+      return res.status(409).json({ message: 'Sinh vien da diem danh cho phien nay' });
+    }
+    console.error('manualSessionCheckIn error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const exportSessionAttendanceExcel = async (req: AuthRequest, res: Response) => {
+  const { sessionId } = req.params;
+  const numericSessionId = Number(sessionId);
+  if (!Number.isFinite(numericSessionId) || numericSessionId <= 0) {
+    return res.status(400).json({ message: 'Session ID khong hop le' });
+  }
+
+  try {
+    const session = await prisma.attendanceSession.findUnique({
+      where: { id: numericSessionId },
+      include: { class: true },
+    });
+
+    if (!session) {
+      return res.status(404).json({ message: 'Khong tim thay phien diem danh' });
+    }
+
+    const accessError = ensureSessionAccess(req, session.class_id);
+    if (accessError) {
+      return res.status(accessError.status).json({ message: accessError.message });
+    }
+
+    let students: any[] = [];
+    let attendances: any[] = [];
+
+    if (session.class_id) {
+      const [studentsRes, attendancesRes] = await Promise.all([
+        prisma.student.findMany({
+          where: { class_id: session.class_id },
+          orderBy: [{ order_number: 'asc' }, { name: 'asc' }],
+        }),
+        prisma.attendance.findMany({
+          where: { session_id: numericSessionId },
+          orderBy: [{ date: 'asc' }],
+        }),
+      ]);
+      students = studentsRes;
+      attendances = attendancesRes;
+    } else {
+      attendances = await prisma.attendance.findMany({
+        where: { session_id: numericSessionId },
+        include: { student: true },
+        orderBy: [{ date: 'asc' }],
+      });
+      students = attendances.map((a) => a.student);
+    }
+
+    const attendanceMap = new Map(attendances.map((att) => [att.student_id, att]));
+
+    const ExcelJS = await import('exceljs');
+    const ExcelJSModule = (ExcelJS.default || ExcelJS) as any;
+    const workbook = new ExcelJSModule.Workbook();
+    const sheet = workbook.addWorksheet('Danh Sách Điểm Danh');
+
+    sheet.columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'MSSV', key: 'student_code', width: 15 },
+      { header: 'Họ và tên', key: 'name', width: 25 },
+      { header: 'Lớp', key: 'class_id', width: 15 },
+      { header: 'Trạng thái', key: 'status', width: 20 },
+      { header: 'Thời gian quét', key: 'time', width: 25 },
+      { header: 'IP Address', key: 'ipAddress', width: 15 },
+      { header: 'Xác minh vị trí', key: 'verifiedLocation', width: 20 },
+    ];
+
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4F46E5' },
+    };
+
+    students.forEach((student, index) => {
+      const attendance = attendanceMap.get(student.id);
+      sheet.addRow({
+        stt: index + 1,
+        student_code: student.student_code,
+        name: student.name,
+        class_id: student.class_id,
+        status: attendance ? 'Đã điểm danh' : 'Chưa điểm danh',
+        time: attendance ? new Date(attendance.date).toLocaleString('vi-VN') : '--',
+        ipAddress: attendance ? (attendance.ipAddress === 'manual' ? 'Thủ công' : attendance.ipAddress || 'N/A') : '--',
+        verifiedLocation: attendance
+          ? attendance.verifiedLocation
+            ? 'Hợp lệ'
+            : 'Không hợp lệ'
+          : '--',
+      });
+    });
+
+    const safeTitle = session.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="diem-danh-${safeTitle || session.id}.xlsx"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exporting attendance session:', error);
+    res.status(500).json({ message: 'Lỗi server khi xuất file excel' });
   }
 };

@@ -8,9 +8,13 @@ import {
   createTrainingScore,
   getSubmissionStatus,
   exportTrainingScoresExcel,
-} from '../controllers/training.controller';
-import { getEvidenceFile, uploadEvidence } from '../controllers/upload.controller';
-import { authMiddleware, roleMiddleware } from '../middleware/auth.middleware';
+  submitStudentCustomEvidence,
+  getStudentCustomEvidence,
+  getAllCustomEvidence,
+  reviewCustomEvidence,
+} from '../controllers/training.controller.js';
+import { getEvidenceFile, uploadEvidence } from '../controllers/upload.controller.js';
+import { authMiddleware, roleMiddleware } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -18,6 +22,10 @@ router.use(authMiddleware);
 
 router.get('/export', roleMiddleware(['ADMIN']), exportTrainingScoresExcel);
 router.get('/submission-status', getSubmissionStatus);
+router.get('/evidence/student', getStudentCustomEvidence);
+router.get('/evidence/all', roleMiddleware(['ADMIN', 'BCH']), getAllCustomEvidence);
+router.post('/evidence/review', roleMiddleware(['ADMIN', 'BCH']), reviewCustomEvidence);
+router.post('/evidence/submit', submitStudentCustomEvidence);
 router.get('/evidence/:encodedKey', getEvidenceFile);
 router.get('/', (req, res, next) => {
   const { studentId } = req.query;

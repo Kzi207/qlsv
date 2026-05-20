@@ -49,7 +49,14 @@ const getCookieDomain = (req?: Request) => {
     return undefined;
   }
 
-  const configuredDomain = process.env.COOKIE_DOMAIN;
+  let configuredDomain = process.env.COOKIE_DOMAIN;
+  if (!configuredDomain) {
+    if (hostname.endsWith('khanhduy.id.vn')) {
+      configuredDomain = 'khanhduy.id.vn';
+    } else if (hostname.endsWith('kzii.site')) {
+      configuredDomain = 'kzii.site';
+    }
+  }
   if (!configuredDomain) return undefined;
   if (!req) return configuredDomain;
 

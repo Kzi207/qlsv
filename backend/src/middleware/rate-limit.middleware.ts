@@ -14,6 +14,9 @@ type RateLimitBucket = {
 };
 
 const buckets = new Map<string, RateLimitBucket>();
+const PRUNE_INTERVAL_MS = 30 * 1000;
+const MAX_BUCKETS = 50_000;
+let lastPruneAt = 0;
 
 const normalizeIp = (value: string) =>
   String(value || '')
@@ -38,6 +41,27 @@ const pruneExpiredBuckets = (now: number) => {
   }
 };
 
+const evictOldestBuckets = (removeCount: number) => {
+  if (removeCount <= 0) return;
+  let deleted = 0;
+  for (const key of buckets.keys()) {
+    buckets.delete(key);
+    deleted += 1;
+    if (deleted >= removeCount) break;
+  }
+};
+
+const pruneAndCapBuckets = (now: number) => {
+  if (now - lastPruneAt >= PRUNE_INTERVAL_MS) {
+    pruneExpiredBuckets(now);
+    lastPruneAt = now;
+  }
+
+  if (buckets.size > MAX_BUCKETS) {
+    evictOldestBuckets(buckets.size - MAX_BUCKETS);
+  }
+};
+
 export const createRateLimitMiddleware = (options: RateLimitOptions) => {
   const keyPrefix = options.keyPrefix || 'rate-limit';
   const message = options.message || 'Too many requests, please try again later.';
@@ -48,22 +72,28 @@ export const createRateLimitMiddleware = (options: RateLimitOptions) => {
     }
 
     const now = Date.now();
-    if (Math.random() < 0.02) {
-      pruneExpiredBuckets(now);
-    }
+    pruneAndCapBuckets(now);
 
     const key = `${keyPrefix}:${getClientKey(req)}`;
     const existing = buckets.get(key);
 
     if (!existing || existing.resetAt <= now) {
+      const resetAt = now + options.windowMs;
       buckets.set(key, {
         count: 1,
-        resetAt: now + options.windowMs,
+        resetAt,
       });
+      res.setHeader('X-RateLimit-Limit', String(options.max));
+      res.setHeader('X-RateLimit-Remaining', String(Math.max(options.max - 1, 0)));
+      res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
       return next();
     }
 
     existing.count += 1;
+    const remaining = Math.max(options.max - existing.count, 0);
+    res.setHeader('X-RateLimit-Limit', String(options.max));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(existing.resetAt / 1000)));
 
     if (existing.count > options.max) {
       const retryAfterSeconds = Math.max(Math.ceil((existing.resetAt - now) / 1000), 1);
@@ -74,4 +104,3 @@ export const createRateLimitMiddleware = (options: RateLimitOptions) => {
     return next();
   };
 };
-

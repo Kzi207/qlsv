@@ -52,7 +52,7 @@ const Login = () => {
   };
 
   return (
-    <div className="login-root-container bg-background font-body-md text-on-surface overflow-x-hidden min-h-screen relative w-full">
+    <div className="login-root-container bg-transparent lg:bg-background font-body-md text-on-surface overflow-x-hidden min-h-screen relative w-full">
       
       {/* Dynamic Material Symbols CDN + Custom Scoped Style Variables */}
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -61,6 +61,20 @@ const Login = () => {
       <style dangerouslySetInnerHTML={{ __html: `
         .login-root-container {
           font-family: 'Inter', sans-serif;
+        }
+        
+        @media (max-width: 1023px) {
+          .login-branding-panel {
+            display: none !important;
+          }
+          .login-main-container {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            min-height: calc(100vh - 60px) !important;
+          }
+          .login-card-wrapper {
+            margin-top: 3.5rem !important;
+          }
         }
         
         .material-symbols-outlined {
@@ -79,6 +93,10 @@ const Login = () => {
 
         .bg-overlay {
           background: linear-gradient(180deg, rgba(0, 20, 50, 0.35) 0%, rgba(0, 50, 120, 0.75) 45%, rgba(0, 30, 80, 0.92) 100%);
+        }
+
+        .bg-overlay-mobile {
+          background: linear-gradient(180deg, rgba(0, 86, 210, 0.7) 0%, rgba(0, 86, 210, 0.95) 100%);
         }
 
         .input-glow:focus-within {
@@ -158,235 +176,424 @@ const Login = () => {
         }
       ` }} />
 
-      {/* Top Navigation Bar */}
-      <header className="flex justify-end items-center w-full px-8 py-4 absolute z-50 bg-transparent">
-        <div className="flex items-center gap-4">
-          <button className="material-symbols-outlined text-white/90 hover:text-secondary-container transition-colors duration-200">language</button>
-          <button className="material-symbols-outlined text-white/90 hover:text-secondary-container transition-colors duration-200">help_outline</button>
-        </div>
-      </header>
-
-      {/* Main Content Container */}
-      <main className="relative min-h-screen w-full flex items-center justify-center py-20 px-4 md:px-10 overflow-hidden">
+      {/* Mobile Layout (99% matched to your exact HTML template) - Visible only on mobile/tablet */}
+      <div className="block lg:hidden min-h-screen w-full flex flex-col items-center justify-start overflow-x-hidden relative">
         
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 z-0">
+        {/* Background Image and Overlay */}
+        <div className="fixed inset-0 z-[-1] lg:hidden">
           <img 
-            alt="CTUT Campus Building" 
-            className="w-full h-full object-cover object-[85%_top]" 
-            src="/bg-campus.png" 
+            alt="CTUT Building" 
+            className="w-full h-full object-cover" 
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVQML7G7lJ1p3ZJX6GJVSCJ4kIg-Eg1TiVQGAoWC9as8hyd9-SrPbu0k8TZupLcG7_PWoxF2taka-S3HWhuEvHiUlxGnqweK2ToVN1uoFdrz7WMtSND9Uf5YFuqyXw8_Fuu14GNRX_5bI1gCY4F9x2E7LwiayhZ10YmJuDMs2yNcxv14UJA8ItsmvEcNfxDrVcK8m-R-VOIVp0gooAAQnGp-WZkyCxosjRqSA7E3RWgKa4WA9Jxh2gr5JClG3QFu8qOORKtZJGl_yR"
           />
-          <div className="absolute inset-0 bg-overlay z-10"></div>
-          
-          {/* Decorative Gear Icons for Mechanical Identity with parallax state */}
-          <div 
-            className="absolute bottom-10 left-1/4 opacity-10 animate-spin-gear pointer-events-none" 
-            style={{ transform: gearTranslation.g1, transition: 'transform 0.1s ease-out' }}
-          >
-            <span className="material-symbols-outlined text-[200px] text-white">settings</span>
-          </div>
-          <div 
-            className="absolute top-20 right-1/4 opacity-10 animate-spin-reverse-gear pointer-events-none" 
-            style={{ transform: gearTranslation.g2, transition: 'transform 0.1s ease-out' }}
-          >
-            <span className="material-symbols-outlined text-[150px] text-white">settings</span>
-          </div>
+          <div className="absolute inset-0 bg-overlay-mobile"></div>
         </div>
 
-        <div className="container mx-auto relative z-20 flex flex-col lg:flex-row items-center justify-between gap-12 max-w-7xl">
-          
-          {/* Left Side: Branding & Info */}
-          <div className="w-full lg:w-1/2 text-white flex flex-col gap-8">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined bg-white/20 p-2.5 rounded-xl text-white shadow-md">school</span>
-                <span className="text-sm font-bold uppercase tracking-widest text-[#ccd8ff] drop-shadow-sm">CỔNG THÔNG TIN</span>
-              </div>
-              <h1 className="font-headline-lg leading-tight md:text-[46px] max-w-xl text-white font-extrabold tracking-tight drop-shadow-2xl" style={{ textShadow: '0 4px 20px rgba(0, 20, 60, 0.6)' }}>
-                <span className="block text-white/95 text-lg md:text-xl font-bold uppercase tracking-widest mb-1.5">TRƯỜNG ĐẠI HỌC</span>
-                KỸ THUẬT - CÔNG NGHỆ CẦN THƠ
-              </h1>
-              <div className="h-1.5 w-28 bg-[#0077ff] rounded-full shadow-lg shadow-[#0077ff]/50"></div>
-              <h2 className="font-headline-sm text-headline-sm text-secondary-container font-extrabold tracking-wider uppercase drop-shadow-md" style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.4)' }}>
-                KHOA KỸ THUẬT CƠ KHÍ
-              </h2>
-              <p className="text-body-lg text-white/95 max-w-md leading-relaxed font-medium">
-                Đăng nhập để truy cập Cổng thông tin sinh viên và sử dụng các dịch vụ trực tuyến của Khoa.
-              </p>
-            </div>
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-              <div className="flex flex-col gap-3 group">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center transition-all group-hover:bg-white/25 border border-white/10">
-                  <span className="material-symbols-outlined text-white">verified_user</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-white mb-1">Bảo mật</h4>
-                  <p className="text-label-md text-white/80">Thông tin của bạn được bảo vệ an toàn</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 group">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center transition-all group-hover:bg-white/25 border border-white/10">
-                  <span className="material-symbols-outlined text-white">speed</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-white mb-1">Nhanh chóng</h4>
-                  <p className="text-label-md text-white/80">Truy cập nhanh đến các dịch vụ</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 group">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center transition-all group-hover:bg-white/25 border border-white/10">
-                  <span className="material-symbols-outlined text-white">groups</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-white mb-1">Hỗ trợ</h4>
-                  <p className="text-label-md text-white/80">Đội ngũ hỗ trợ luôn sẵn sàng giúp bạn</p>
-                </div>
-              </div>
+        {/* Header Content */}
+        <header className="w-full pt-12 pb-6 px-6 flex flex-col items-center text-center space-y-4" data-purpose="branding">
+          {/* Logo */}
+          <div className="w-24 h-24 mb-2">
+            <img 
+              alt="CTUT Logo" 
+              className="w-full h-full object-contain" 
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoKC0LG1y-eAqSD2k6uJpid9Lv6A5jlOwpjNqe1df7rjcVoda64tq0c1BHrKhxNpe-1MUswDIGjSD1QgQMU8hGfm1KbGW4zi6y6RrtZCxoI1Vcv1AQiA_IjcfKIjjcFiD9DqlnfjTfpoXx2cryXKUUV26PaEyb9hghAJ2_9HRsF7S7_71SfVS3s0-azEqM-0jwB6NktFSBgImsESzEOOj4Daj6-U4VXcisVtCs7oMwMwa7rdKkJQG7t2ovhPY_I8M0FmZsRO9c0lqI"
+            />
+          </div>
+          {/* Branding Text */}
+          <div className="space-y-1">
+            <h2 className="text-slate-800 font-bold text-lg tracking-wide uppercase leading-tight">
+              Trường Đại học Kỹ thuật - Công nghệ Cần Thơ
+            </h2>
+            <div className="flex items-center justify-center space-x-2">
+              <div className="h-[1px] w-8 bg-slate-400"></div>
+              <span className="text-slate-700 font-semibold text-sm uppercase tracking-widest">
+                Khoa Kỹ thuật Cơ khí
+              </span>
+              <div className="h-[1px] w-8 bg-slate-400"></div>
             </div>
           </div>
+          <h1 className="text-slate-800 font-bold text-2xl pt-4">
+            ĐĂNG NHẬP HỆ THỐNG
+          </h1>
+        </header>
 
-          {/* Right Side: Login Card */}
-          <div className="w-full lg:w-[460px]">
-            <div className="glass-card rounded-[2rem] p-8 md:p-12 transition-all duration-500">
-              
-              <div className="flex flex-col items-center mb-8">
-                <img 
-                  alt="CTUT Mechanical Engineering Logo" 
-                  className="w-24 h-24 object-contain mb-6 drop-shadow-lg" 
-                  src="/logo-qlsv.png" 
+        {/* Main Login Card */}
+        <main className="w-[92%] max-w-[440px] mx-auto mt-4 bg-white rounded-[40px] px-8 pt-10 pb-12 shadow-2xl mb-8 relative z-10" data-purpose="login-form-container">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Username Field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-800" htmlFor="username">Tên đăng nhập</label>
+              <div className="input-field flex items-center border border-slate-200 rounded-xl px-4 py-4 transition-all bg-white">
+                <svg className="h-5 w-5 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+                <input 
+                  className="w-full outline-none text-slate-700 border-none p-0 focus:ring-0 placeholder-slate-400 text-sm" 
+                  id="username" 
+                  placeholder="Nhập tên đăng nhập" 
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
                 />
-                <h3 className="font-headline-md text-headline-md text-primary text-center mb-2 font-bold tracking-tight whitespace-nowrap">
-                  ĐĂNG NHẬP HỆ THỐNG
-                </h3>
-                <div className="flex items-center gap-3 w-full">
-                  <div className="h-[1px] flex-grow bg-[#c3c6d6]/60"></div>
-                  <span className="text-label-md text-secondary font-bold whitespace-nowrap uppercase tracking-widest">
-                    KHOA KỸ THUẬT CƠ KHÍ
-                  </span>
-                  <div className="h-[1px] flex-grow bg-[#c3c6d6]/60"></div>
-                </div>
               </div>
+            </div>
 
-              {/* Core Active Form */}
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                
-                {/* Username */}
-                <div className="space-y-2 group">
-                  <label className="text-label-md font-bold text-on-surface-variant block ml-1">
-                    Tên đăng nhập
-                  </label>
-                  <div className="relative flex items-center input-glow rounded-xl bg-surface-container-lowest border border-outline-variant transition-all focus-within:border-primary">
-                    <span className="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">
-                      person
-                    </span>
-                    <input 
-                      className="w-full bg-transparent border-none py-4 pl-12 pr-4 focus:ring-0 text-on-surface placeholder:text-outline-variant outline-none" 
-                      placeholder="Nhập tên đăng nhập" 
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2 group">
-                  <label className="text-label-md font-bold text-on-surface-variant block ml-1">
-                    Mật khẩu
-                  </label>
-                  <div className="relative flex items-center input-glow rounded-xl bg-surface-container-lowest border border-outline-variant transition-all focus-within:border-primary">
-                    <span className="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">
-                      lock
-                    </span>
-                    <input 
-                      className="w-full bg-transparent border-none py-4 pl-12 pr-12 focus:ring-0 text-on-surface placeholder:text-outline-variant outline-none" 
-                      placeholder="Nhập mật khẩu" 
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    
-                    {/* Toggle password visibility */}
-                    <button 
-                      className="absolute right-4 text-outline hover:text-primary transition-colors flex items-center justify-center" 
-                      onClick={() => setShowPassword(!showPassword)} 
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined">
-                        {showPassword ? 'visibility_off' : 'visibility'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between text-label-md px-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-on-surface-variant font-bold">
-                    <input 
-                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" 
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    Ghi nhớ đăng nhập
-                  </label>
-                  <a 
-                    className="text-secondary hover:text-primary-container font-bold transition-colors" 
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); toast.success('Vui lòng liên hệ Văn phòng Khoa để đặt lại mật khẩu.'); }}
-                  >
-                    Quên mật khẩu?
-                  </a>
-                </div>
-
-                {/* Submit Action */}
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-800" htmlFor="password">Mật khẩu</label>
+              <div className="input-field flex items-center border border-slate-200 rounded-xl px-4 py-4 transition-all bg-white">
+                <svg className="h-5 w-5 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+                <input 
+                  className="w-full outline-none text-slate-700 border-none p-0 focus:ring-0 placeholder-slate-400 text-sm" 
+                  id="password" 
+                  placeholder="Nhập mật khẩu" 
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
                 <button 
-                  className="w-full vibrant-btn text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed"
-                  type="submit"
-                  disabled={loading}
+                  className="text-slate-400 ml-2 focus:outline-none" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  type="button"
                 >
-                  {loading ? (
-                    <Loader2 className="animate-spin" size={18} />
-                  ) : (
-                    <>
-                      <span>Đăng nhập</span>
-                      <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-                    </>
-                  )}
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                  </svg>
                 </button>
-              </form>
-
-              {/* Trust Footer */}
-              <div className="mt-10 flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2 text-label-md text-on-surface-variant font-medium">
-                  <span className="material-symbols-outlined text-secondary text-lg">security</span>
-                  <span className="text-center">Bảo mật thông tin của bạn là ưu tiên hàng đầu của chúng tôi.</span>
-                </div>
               </div>
+            </div>
 
+            {/* Actions Area */}
+            <div className="flex items-center justify-between py-2">
+              <label className="flex items-center cursor-pointer select-none">
+                <input 
+                  className="rounded border-slate-300 text-[#0056d2] focus:ring-[#0056d2] h-5 w-5 mr-2 cursor-pointer" 
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <span className="text-sm text-slate-700 font-medium">Ghi nhớ đăng nhập</span>
+              </label>
+              <a 
+                className="text-sm font-semibold text-[#0056d2] hover:underline" 
+                href="#"
+                onClick={(e) => { e.preventDefault(); toast.success('Vui lòng liên hệ Văn phòng Khoa để đặt lại mật khẩu.'); }}
+              >
+                Quên mật khẩu?
+              </a>
+            </div>
+
+            {/* Submit Button */}
+            <button 
+              className="w-full bg-[#0056d2] text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform disabled:opacity-75 disabled:cursor-not-allowed" 
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <>
+                  <span>Đăng nhập</span>
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 5l7 7m0 0l-7 7m7-7H3" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                  </svg>
+                </>
+              )}
+            </button>
+
+            {/* Security Info Box */}
+            <div className="bg-blue-50/50 rounded-2xl p-5 flex items-center space-x-4 border border-blue-100" data-purpose="security-info">
+              <div className="bg-[#0056d2] p-2.5 rounded-full text-white">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[#0056d2] font-bold text-sm">Bảo mật thông tin của bạn</span>
+                <span className="text-slate-500 text-xs mt-0.5 leading-relaxed">Là ưu tiên hàng đầu của chúng tôi.</span>
+              </div>
+            </div>
+          </form>
+        </main>
+
+        {/* Bottom Utilities */}
+        <section className="w-full bg-white px-6 pb-8 space-y-4" data-purpose="info-cards">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center">
+              <div className="text-[#0056d2] mb-1">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+              </div>
+              <span className="text-[10px] font-bold text-slate-700">Bảo mật</span>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center">
+              <div className="text-[#0056d2] mb-1">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 10V3L4 14h7v7l9-11h-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+              </div>
+              <span className="text-[10px] font-bold text-slate-700">Nhanh chóng</span>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center">
+              <div className="text-[#0056d2] mb-1">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+              </div>
+              <span className="text-[10px] font-bold text-slate-700">Hỗ trợ</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="w-full bg-[#0056d2] py-4 px-6 text-center" data-purpose="site-footer">
+          <p className="text-white/60 text-[10px] leading-relaxed">
+            © 2024 Khoa Kỹ thuật Cơ khí - CTUT. Bảo lưu mọi quyền.<br/>
+            Phát triển bởi Trung tâm CNTT & TT.
+          </p>
+          <div className="h-6 w-full"></div>
+        </footer>
+
+      </div>
+
+      {/* Desktop Layout (gorgeous split screen view) - Visible only on desktop */}
+      <div className="hidden lg:block min-h-screen relative w-full">
+        {/* Top Navigation Bar */}
+        <header className="flex justify-end items-center w-full px-8 py-4 absolute z-50 bg-transparent">
+          <div className="flex items-center gap-4">
+            <button className="material-symbols-outlined text-white/90 hover:text-secondary-container transition-colors duration-200">language</button>
+            <button className="material-symbols-outlined text-white/90 hover:text-secondary-container transition-colors duration-200">help_outline</button>
+          </div>
+        </header>
+
+        {/* Main Content Container */}
+        <main className="login-main-container relative min-h-screen w-full flex items-center justify-center py-20 px-10 overflow-hidden">
+          
+          {/* Background Image with Overlay */}
+          <div className="absolute inset-0 z-0">
+            <img 
+              alt="CTUT Campus Building" 
+              className="w-full h-full object-cover object-center" 
+              src="ChatGPT Image 17_42_48 20 thg 5, 2026.png" 
+            />
+            <div className="absolute inset-0 bg-overlay z-10"></div>
+            
+            {/* Decorative Gear Icons for Parallax effect */}
+            <div 
+              className="absolute bottom-10 left-1/4 opacity-10 animate-spin-gear pointer-events-none" 
+              style={{ transform: gearTranslation.g1, transition: 'transform 0.1s ease-out' }}
+            >
+              <span className="material-symbols-outlined text-[200px] text-white">settings</span>
+            </div>
+            <div 
+              className="absolute top-20 right-1/4 opacity-10 animate-spin-reverse-gear pointer-events-none" 
+              style={{ transform: gearTranslation.g2, transition: 'transform 0.1s ease-out' }}
+            >
+              <span className="material-symbols-outlined text-[150px] text-white">settings</span>
             </div>
           </div>
 
-        </div>
-      </main>
+          <div className="container mx-auto relative z-20 flex flex-row items-center justify-between gap-12 max-w-7xl">
+            
+            {/* Left Side: Branding & Info */}
+            <div className="login-branding-panel flex w-1/2 text-white flex-col gap-8">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined bg-white/20 p-2.5 rounded-xl text-white shadow-md">school</span>
+                  <span className="text-sm font-bold uppercase tracking-widest text-[#ccd8ff] drop-shadow-sm">CỔNG THÔNG TIN</span>
+                </div>
+                <h1 className="font-headline-lg leading-tight md:text-[46px] max-w-xl text-white font-extrabold tracking-tight drop-shadow-2xl" style={{ textShadow: '0 4px 20px rgba(0, 20, 60, 0.6)' }}>
+                  <span className="block text-white/95 text-lg md:text-xl font-bold uppercase tracking-widest mb-1.5">TRƯỜNG ĐẠI HỌC</span>
+                  KỸ THUẬT - CÔNG NGHỆ CẦN THƠ
+                </h1>
+                <div className="h-1.5 w-28 bg-[#0077ff] rounded-full shadow-lg shadow-[#0077ff]/50"></div>
+                <h2 className="font-headline-sm text-headline-sm text-secondary-container font-extrabold tracking-wider uppercase drop-shadow-md" style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.4)' }}>
+                  KHOA KỸ THUẬT CƠ KHÍ
+                </h2>
+                <p className="text-body-lg text-white/95 max-w-md leading-relaxed font-medium">
+                  Đăng nhập để truy cập Cổng thông tin sinh viên và sử dụng các dịch vụ trực tuyến của Khoa.
+                </p>
+              </div>
 
-      {/* Footer Area */}
-      <footer className="absolute bottom-4 w-full flex flex-col md:flex-row justify-between items-center px-8 gap-4 z-30">
-        <div className="text-label-md font-bold text-white/90">
-          © 2024 Khoa Kỹ thuật Cơ khí - Trường Đại học Kỹ thuật - Công nghệ Cần Thơ
-        </div>
-        <div className="flex items-center gap-6">
-          <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Chính sách bảo mật</a>
-          <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Điều khoản sử dụng</a>
-          <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Liên hệ hệ thống</a>
-        </div>
-      </footer>
+              {/* Info Grid */}
+              <div className="grid grid-cols-3 gap-6 pt-6">
+                <div className="flex flex-col gap-3 group">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center transition-all group-hover:bg-white/25 border border-white/10">
+                    <span className="material-symbols-outlined text-white">verified_user</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white mb-1">Bảo mật</h4>
+                    <p className="text-label-md text-white/80">Thông tin của bạn được bảo vệ an toàn</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 group">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center transition-all group-hover:bg-white/25 border border-white/10">
+                    <span className="material-symbols-outlined text-white">speed</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white mb-1">Nhanh chóng</h4>
+                    <p className="text-label-md text-white/80">Truy cập nhanh đến các dịch vụ</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 group">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center transition-all group-hover:bg-white/25 border border-white/10">
+                    <span className="material-symbols-outlined text-white">groups</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white mb-1">Hỗ trợ</h4>
+                    <p className="text-label-md text-white/80">Đội ngũ hỗ trợ luôn sẵn sàng giúp bạn</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side: Login Card */}
+            <div className="login-card-wrapper w-[460px] ml-auto mr-0">
+              <div className="glass-card rounded-[2rem] p-12 transition-all duration-500">
+                
+                <div className="flex flex-col items-center mb-8">
+                  <img 
+                    alt="CTUT Mechanical Engineering Logo" 
+                    className="w-24 h-24 object-contain mb-6 drop-shadow-lg" 
+                    src="/logo-qlsv.png" 
+                  />
+                  <h3 className="font-headline-md text-headline-md text-primary text-center mb-2 font-bold tracking-tight whitespace-nowrap">
+                    ĐĂNG NHẬP HỆ THỐNG
+                  </h3>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="h-[1px] flex-grow bg-[#c3c6d6]/60"></div>
+                    <span className="text-label-md text-secondary font-bold whitespace-nowrap uppercase tracking-widest">
+                      KHOA KỸ THUẬT CƠ KHÍ
+                    </span>
+                    <div className="h-[1px] flex-grow bg-[#c3c6d6]/60"></div>
+                  </div>
+                </div>
+
+                {/* Core Active Form */}
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                  
+                  {/* Username */}
+                  <div className="space-y-2 group">
+                    <label className="text-label-md font-bold text-on-surface-variant block ml-1">
+                      Tên đăng nhập
+                    </label>
+                    <div className="relative flex items-center input-glow rounded-xl bg-surface-container-lowest border border-outline-variant transition-all focus-within:border-primary">
+                      <span className="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">
+                        person
+                      </span>
+                      <input 
+                        className="w-full bg-transparent border-none py-4 pl-12 pr-4 focus:ring-0 text-on-surface placeholder:text-outline-variant outline-none" 
+                        placeholder="Nhập tên đăng nhập" 
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-2 group">
+                    <label className="text-label-md font-bold text-on-surface-variant block ml-1">
+                      Mật khẩu
+                    </label>
+                    <div className="relative flex items-center input-glow rounded-xl bg-surface-container-lowest border border-outline-variant transition-all focus-within:border-primary">
+                      <span className="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">
+                        lock
+                      </span>
+                      <input 
+                        className="w-full bg-transparent border-none py-4 pl-12 pr-12 focus:ring-0 text-on-surface placeholder:text-outline-variant outline-none" 
+                        placeholder="Nhập mật khẩu" 
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      
+                      {/* Toggle password visibility */}
+                      <button 
+                        className="absolute right-4 text-outline hover:text-primary transition-colors flex items-center justify-center" 
+                        onClick={() => setShowPassword(!showPassword)} 
+                        type="button"
+                      >
+                        <span className="material-symbols-outlined">
+                          {showPassword ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between text-label-md px-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-on-surface-variant font-bold">
+                      <input 
+                        className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" 
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                      />
+                      Ghi nhớ
+                    </label>
+                    <a 
+                      className="text-secondary hover:text-primary-container font-bold transition-colors" 
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); toast.success('Vui lòng liên hệ Văn phòng Khoa để đặt lại mật khẩu.'); }}
+                    >
+                      Quên mật khẩu?
+                    </a>
+                  </div>
+
+                  {/* Submit Action */}
+                  <button 
+                    className="w-full vibrant-btn text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed"
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      <>
+                        <span>Đăng nhập</span>
+                        <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Trust Footer */}
+                <div className="mt-10 flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2 text-label-md text-on-surface-variant font-medium">
+                    <span className="material-symbols-outlined text-secondary text-lg">security</span>
+                    <span className="text-center text-xs">Bảo mật thông tin của bạn là ưu tiên hàng đầu.</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        {/* Footer Area */}
+        <footer className="absolute bottom-4 w-full flex justify-between items-center px-8 z-30">
+          <div className="text-label-md font-bold text-white/90">
+            © 2024 Khoa Kỹ thuật Cơ khí - Trường Đại học Kỹ thuật - Công nghệ Cần Thơ
+          </div>
+          <div className="flex items-center gap-6">
+            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Chính sách bảo mật</a>
+            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Điều khoản sử dụng</a>
+            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Liên hệ hệ thống</a>
+          </div>
+        </footer>
+      </div>
 
     </div>
   );

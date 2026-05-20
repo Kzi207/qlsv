@@ -1,21 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AUTH_COOKIE_NAME, getCookieValue } from '../utils/security';
-import { getJwtSecret } from '../utils/env';
-
-type AuthPayload = {
-  id?: number;
-  username?: string;
-  role?: string;
-  studentId?: number;
-  class_id?: string;
-  iat?: number;
-  exp?: number;
-};
-
-export interface AuthRequest extends Request {
-  user?: AuthPayload;
-}
+import { AUTH_COOKIE_NAME, getCookieValue } from '../utils/security.js';
+import { getJwtSecret } from '../utils/env.js';
+import type { AuthPayload, AuthRequest } from '../types/index.js';
 
 const getTokenFromAuthorizationHeader = (authorizationHeader?: string) => {
   const headerValue = String(authorizationHeader || '').trim();

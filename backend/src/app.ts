@@ -6,17 +6,18 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
-import authRoutes from './routes/auth.routes';
-import studentRoutes from './routes/student.routes';
-import classRoutes from './routes/class.routes';
-import semesterRoutes from './routes/semester.routes';
-import trainingRoutes from './routes/training.routes';
-import attendanceRoutes from './routes/attendance.routes';
-import bchRoutes from './routes/bch.routes';
-import { getAllowedOrigins } from './utils/security';
-import { securityHeadersMiddleware } from './middleware/security-headers.middleware';
-import { csrfMiddleware } from './middleware/csrf.middleware';
-import { getJwtSecret } from './utils/env';
+import authRoutes from './routes/auth.routes.js';
+import studentRoutes from './routes/student.routes.js';
+import classRoutes from './routes/class.routes.js';
+import semesterRoutes from './routes/semester.routes.js';
+import trainingRoutes from './routes/training.routes.js';
+import attendanceRoutes from './routes/attendance.routes.js';
+import bchRoutes from './routes/bch.routes.js';
+import eventRoutes from './routes/event.routes.js';
+import { getAllowedOrigins } from './utils/security.js';
+import { securityHeadersMiddleware } from './middleware/security-headers.middleware.js';
+import { csrfMiddleware } from './middleware/csrf.middleware.js';
+import { getJwtSecret } from './utils/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -91,6 +92,7 @@ app.use('/api/training', trainingRoutes);
 app.use('/api/semesters', semesterRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/bch', bchRoutes);
+app.use('/api/events', eventRoutes);
 
 // Health check
 app.get('/', (req, res) => {

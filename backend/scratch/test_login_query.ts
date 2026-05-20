@@ -9,11 +9,7 @@ async function test() {
       include: {
         student: {
           include: {
-            class: {
-              include: {
-                major: true
-              }
-            }
+            class: true
           }
         }
       }
