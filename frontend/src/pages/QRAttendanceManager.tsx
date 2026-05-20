@@ -142,6 +142,7 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [classFilter, setClassFilter] = useState('');
   const [sessionTypeFilter, setSessionTypeFilter] = useState<'ALL' | 'QR_CLASS' | 'ACTIVITY'>(type || 'ALL');
+  const [showLargeQr, setShowLargeQr] = useState(false);
   const [newSession, setNewSession] = useState({
     sessionType: type || 'QR_CLASS',
     title: '',
@@ -255,6 +256,17 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
     fetchSemesters();
     fetchSessions();
     getCurrentLocation();
+  }, []);
+
+  // Support Escape key to close the large QR Modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowLargeQr(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -969,9 +981,18 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
                   </div>
 
                   {selectedSession.isActive && (
-                    <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-inner">
+                    <div 
+                      onClick={() => setShowLargeQr(true)}
+                      className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-inner cursor-pointer hover:border-indigo-400 group transition-all duration-300 relative overflow-hidden"
+                      title="Bấm để phóng to mã QR"
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl">
+                        <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 active:scale-95 transition-transform">
+                          🔍 Phóng to QR
+                        </span>
+                      </div>
                       <QRCodeSVG value={selectedSessionQrUrl || selectedSession.qrToken} size={190} level="H" includeMargin />
-                      <p className="mt-3 break-all text-[11px] font-mono text-slate-500">{selectedSessionQrUrl || selectedSession.qrToken}</p>
+                      <p className="mt-3 break-all text-[11px] font-mono text-slate-500 group-hover:text-indigo-600 transition-colors">{selectedSessionQrUrl || selectedSession.qrToken}</p>
                     </div>
                   )}
 
@@ -1160,6 +1181,64 @@ const QRAttendanceManager = ({ type }: { type?: 'QR_CLASS' | 'ACTIVITY' }) => {
           </div>
         )}
       </div>
+
+      {/* Modal QR Code Phóng To Premium */}
+      {showLargeQr && selectedSession && (
+        <div 
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md p-4"
+          onClick={() => setShowLargeQr(false)}
+        >
+          <div 
+            className="relative max-w-xl w-full rounded-[2.5rem] bg-white p-6 md:p-8 border border-slate-100 shadow-2xl text-center flex flex-col items-center justify-center transform scale-100 transition-all duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Nút đóng góc phải */}
+            <button 
+              type="button"
+              onClick={() => setShowLargeQr(false)}
+              className="absolute right-6 top-6 text-slate-400 hover:text-red-500 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+            >
+              <XCircle className="h-8 w-8" />
+            </button>
+
+            {/* Chi tiết hoạt động */}
+            <div className="mb-6 space-y-2">
+              <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-black uppercase tracking-wider text-indigo-700">
+                {selectedSession.class_id || 'Toàn trường'}
+              </span>
+              <h3 className="text-2xl md:text-3xl font-black text-slate-800">{selectedSession.title}</h3>
+              <p className="text-sm font-semibold text-slate-500">{selectedSession.subject || 'Không có môn học'}</p>
+              <p className="text-xs text-slate-400">Quét mã QR dưới đây bằng camera hoặc trình duyệt để tiến hành điểm danh.</p>
+            </div>
+
+            {/* Mã QR cực to */}
+            <div className="rounded-[2rem] border-2 border-indigo-100 bg-white p-4 shadow-xl shadow-indigo-100/50">
+              <QRCodeSVG value={selectedSessionQrUrl || selectedSession.qrToken} size={320} level="H" includeMargin />
+            </div>
+
+            {/* Đường dẫn */}
+            <div className="mt-6 w-full">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">ĐƯỜNG DẪN ĐIỂM DANH:</p>
+              <p 
+                className="break-all rounded-2xl bg-slate-50 p-3.5 font-mono text-xs text-indigo-600 border border-slate-100 select-all cursor-pointer hover:bg-slate-100 transition-colors"
+                title="Bôi đen hoặc nhấp đúp để chọn tất cả"
+              >
+                {selectedSessionQrUrl || selectedSession.qrToken}
+              </p>
+            </div>
+
+            {/* Nút đóng chân trang */}
+            <button
+              type="button"
+              onClick={() => setShowLargeQr(false)}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-indigo-600/30 transition-all active:scale-95 cursor-pointer"
+            >
+              ĐÓNG CỬA SỔ [ESC]
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
