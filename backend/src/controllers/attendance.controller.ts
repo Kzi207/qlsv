@@ -1413,8 +1413,8 @@ export const exportSessionAttendanceExcel = async (req: AuthRequest, res: Respon
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="diem-danh-${safeTitle || session.id}.xlsx"`);
 
-    await workbook.xlsx.write(res);
-    res.end();
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.send(buffer);
   } catch (error) {
     console.error('Error exporting attendance session:', error);
     res.status(500).json({ message: 'Lỗi server khi xuất file excel' });

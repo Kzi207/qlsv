@@ -1,4 +1,4 @@
-﻿import type { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
@@ -272,8 +272,8 @@ export const exportEventRegistrationsExcel = async (req: Request, res: Response)
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="danh-sach-dang-ky-${event.id}.xlsx"`);
 
-    await workbook.xlsx.write(res);
-    res.end();
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.send(buffer);
   } catch (error) {
     console.error('Error exporting registrations:', error);
     res.status(500).json({ message: 'Lá»—i server khi xuáº¥t file excel' });

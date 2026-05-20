@@ -590,8 +590,9 @@ export const exportTrainingScoresExcel = async (req: Request, res: Response) => 
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="diem-ren-luyen.xlsx"');
-    await workbook.xlsx.write(res);
-    res.end();
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.send(buffer);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Export failed' });
