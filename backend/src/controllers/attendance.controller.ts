@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import prisma from '../utils/prisma.js';
 import { normalizeSemesterName } from '../utils/semester.js';
 import type { AuthRequest } from '../types/index.js';
+import { getExcelJS, sendWorkbookAsXlsx } from '../utils/excel.js';
 
 interface QrAwardActivity {
   source: 'QR_ATTENDANCE';
@@ -1368,9 +1369,8 @@ export const exportSessionAttendanceExcel = async (req: AuthRequest, res: Respon
 
     const attendanceMap = new Map(attendances.map((att) => [att.student_id, att]));
 
-    const ExcelJS = await import('exceljs');
-    const ExcelJSModule = (ExcelJS.default || ExcelJS) as any;
-    const workbook = new ExcelJSModule.Workbook();
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Danh Sách Điểm Danh');
 
     sheet.columns = [
@@ -1410,11 +1410,7 @@ export const exportSessionAttendanceExcel = async (req: AuthRequest, res: Respon
     });
 
     const safeTitle = session.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="diem-danh-${safeTitle || session.id}.xlsx"`);
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    res.send(buffer);
+    await sendWorkbookAsXlsx(res, workbook, `diem-danh-${safeTitle || session.id}.xlsx`);
   } catch (error) {
     console.error('Error exporting attendance session:', error);
     res.status(500).json({ message: 'Lỗi server khi xuất file excel' });

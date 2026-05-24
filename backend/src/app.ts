@@ -14,6 +14,7 @@ import trainingRoutes from './routes/training.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
 import bchRoutes from './routes/bch.routes.js';
 import eventRoutes from './routes/event.routes.js';
+import supportRoutes from './routes/support.routes.js';
 import { getAllowedOrigins } from './utils/security.js';
 import { securityHeadersMiddleware } from './middleware/security-headers.middleware.js';
 import { csrfMiddleware } from './middleware/csrf.middleware.js';
@@ -93,6 +94,7 @@ app.use('/api/semesters', semesterRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/bch', bchRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/support', supportRoutes);
 
 // Health check
 app.get('/', (req, res) => {

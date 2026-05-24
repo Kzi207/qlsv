@@ -12,7 +12,8 @@ import {
   Calendar,
   UserCheck,
   ChevronRight,
-  User
+  User,
+  LifeBuoy
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,6 +61,7 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
         { name: 'Sự kiện', path: '/events', icon: Calendar, roles: ['ADMIN', 'BCH'] },
         { name: 'Học kỳ', path: '/semesters', icon: Calendar, roles: ['ADMIN', 'BCH'] },
         { name: 'Tài khoản', path: '/accounts', icon: UserPlus, roles: ['ADMIN'] },
+        { name: 'Hỗ trợ', path: '/support', icon: LifeBuoy, roles: ['ADMIN'] },
         { name: 'Ban Cán Sự', path: '/bch', icon: UserCheck, roles: ['ADMIN'] },
       ]
     }
@@ -88,7 +90,7 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
         <div className="flex flex-col h-full">
           {/* Logo Section */}
           <div className="p-6 pb-3 shrink-0 border-b border-slate-50">
-             <div className="flex items-center gap-3.5 group cursor-pointer">
+             <Link to="/" className="flex items-center gap-3.5 group cursor-pointer hover:no-underline">
                 <div className="h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110 duration-500 shadow-md shadow-slate-200/50">
                    <img src="/logo-qlsv.png" alt="Logo" className="w-full h-full object-contain" />
                 </div>
@@ -100,7 +102,7 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
                      Khoa Kỹ Thuật Cơ Khí
                    </p>
                 </div>
-             </div>
+             </Link>
           </div>
 
           {/* Navigation */}

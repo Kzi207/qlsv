@@ -1,7 +1,37 @@
 import axios, { AxiosHeaders } from 'axios';
 
 const CSRF_STORAGE_KEY = 'csrf_token_fallback';
+const API_ENV_NAME = 'VITE_API_URL';
+const apiBaseUrl = String(import.meta.env.VITE_API_URL || '').trim();
 let csrfTokenCache = '';
+
+const getApiConfigError = () => {
+  if (!apiBaseUrl) {
+    return `Thiếu biến môi trường ${API_ENV_NAME}. Vui lòng cấu hình ${API_ENV_NAME}=https://your-api-domain/api.`;
+  }
+
+  // Relative paths (e.g. /api) are valid — they use Vite proxy and stay same-origin
+  if (apiBaseUrl.startsWith('/')) {
+    return '';
+  }
+
+  try {
+    const parsedUrl = new URL(apiBaseUrl);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return `${API_ENV_NAME} phải bắt đầu bằng http:// hoặc https://. Giá trị hiện tại: ${apiBaseUrl}`;
+    }
+  } catch {
+    return `${API_ENV_NAME} không hợp lệ. Giá trị hiện tại: ${apiBaseUrl}`;
+  }
+
+  return '';
+};
+
+export const apiConfigError = getApiConfigError();
+
+if (apiConfigError) {
+  console.error(apiConfigError);
+}
 
 const readStoredCsrfToken = () => {
   try {
@@ -52,11 +82,20 @@ const getEffectiveCsrfToken = () => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
 
+const isAuthProbeRequest = (url?: string) => {
+  const requestUrl = String(url || '');
+  return requestUrl === '/auth/me' || requestUrl.endsWith('/auth/me');
+};
+
 api.interceptors.request.use((config) => {
+  if (apiConfigError) {
+    return Promise.reject(new Error(apiConfigError));
+  }
+
   const method = (config.method || 'get').toUpperCase();
   const needsCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
@@ -112,7 +151,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       writeStoredCsrfToken('');
       const isPublicPath = window.location.pathname === '/login' || window.location.pathname.startsWith('/dangky');
-      if (!isPublicPath) {
+      if (!isPublicPath && !isAuthProbeRequest(originalRequest.url)) {
         window.location.href = '/login';
       }
     }

@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: qlsv-backend
-    runtime: node
-    rootDir: backend
-    buildCommand: npm install --include=dev && npm run build
-    startCommand: npm run start
-    healthCheckPath: /

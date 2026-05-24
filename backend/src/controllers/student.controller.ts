@@ -1,6 +1,25 @@
 import type { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
+import { getExcelJS, sendWorkbookAsXlsx } from '../utils/excel.js';
+
+const IMPORT_BATCH_SIZE = 25;
+
+const runInBatches = async <T, R>(
+  items: T[],
+  batchSize: number,
+  worker: (item: T) => Promise<R>,
+) => {
+  const results: R[] = [];
+
+  for (let index = 0; index < items.length; index += batchSize) {
+    const batch = items.slice(index, index + batchSize);
+    const batchResults = await Promise.all(batch.map(worker));
+    results.push(...batchResults);
+  }
+
+  return results;
+};
 
 const removeAccents = (str: string) => {
   return str
@@ -170,9 +189,8 @@ export const importStudentsExcel = async (req: Request, res: Response) => {
   }
 
   try {
-    const ExcelJS = await import('exceljs');
-    const ExcelJSModule = (ExcelJS.default || ExcelJS) as any;
-    const workbook = new ExcelJSModule.Workbook();
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(req.file.buffer as any);
 
     const worksheet = workbook.worksheets[0];
@@ -286,8 +304,7 @@ export const importStudentsExcel = async (req: Request, res: Response) => {
       classGroups[cid]?.push(s);
     });
 
-    // Prepare all operations
-    const operations: Promise<any>[] = [];
+    const importJobs: Array<{ student: any; orderNumber: number }> = [];
     let lastError = '';
 
     for (const classStudents of Object.values(classGroups)) {
@@ -295,63 +312,60 @@ export const importStudentsExcel = async (req: Request, res: Response) => {
         const student = classStudents[i];
         const orderNumber = (student.stt !== null && !isNaN(student.stt)) ? student.stt : i + 1;
 
-        const op = (async () => {
-          try {
-            // Đảm bảo lớp tồn tại trước khi thêm sinh viên (Tránh lỗi Foreign Key)
-            if (student.class_id && student.class_id !== 'Chưa xếp lớp') {
-              await (prisma as any).class.upsert({
-                where: { id: student.class_id },
-                update: {},
-                create: {
-                  id: student.class_id,
-                  name: `Lớp ${student.class_id}`
-                }
-              });
-            }
-
-            const studentRecord = await (prisma.student as any).upsert({
-              where: { student_code: student.student_code },
-              update: {
-                name: student.name,
-                email: student.email,
-                class_id: student.class_id,
-                order_number: orderNumber
-              },
-              create: {
-                name: student.name,
-                student_code: student.student_code,
-                email: student.email,
-                class_id: student.class_id,
-                order_number: orderNumber
-              },
-              include: { user: true }
-            });
-
-            if (!studentRecord.user) {
-              await prisma.user.create({
-                data: {
-                  username: student.student_code,
-                  password: defaultHashedPassword,
-                  name: student.name,
-                  role: 'STUDENT',
-                  studentId: studentRecord.id
-                }
-              });
-            }
-            return true;
-          } catch (e: any) {
-            console.error(`Lỗi khi nhập sinh viên ${student.student_code}:`, e);
-            lastError = e.message || 'Lỗi DB';
-            return false;
-          }
-        })();
-
-        operations.push(op);
+        importJobs.push({ student, orderNumber });
       }
     }
 
-    // Run all operations and count successes
-    const results = await Promise.all(operations);
+    const results = await runInBatches(importJobs, IMPORT_BATCH_SIZE, async ({ student, orderNumber }) => {
+      try {
+        if (student.class_id && student.class_id !== 'Chưa xếp lớp') {
+          await (prisma as any).class.upsert({
+            where: { id: student.class_id },
+            update: {},
+            create: {
+              id: student.class_id,
+              name: `Lớp ${student.class_id}`
+            }
+          });
+        }
+
+        const studentRecord = await (prisma.student as any).upsert({
+          where: { student_code: student.student_code },
+          update: {
+            name: student.name,
+            email: student.email,
+            class_id: student.class_id,
+            order_number: orderNumber
+          },
+          create: {
+            name: student.name,
+            student_code: student.student_code,
+            email: student.email,
+            class_id: student.class_id,
+            order_number: orderNumber
+          },
+          include: { user: true }
+        });
+
+        if (!studentRecord.user) {
+          await prisma.user.create({
+            data: {
+              username: student.student_code,
+              password: defaultHashedPassword,
+              name: student.name,
+              role: 'STUDENT',
+              studentId: studentRecord.id
+            }
+          });
+        }
+
+        return true;
+      } catch (e: any) {
+        console.error(`Lỗi khi nhập sinh viên ${student.student_code}:`, e);
+        lastError = e.message || 'Lỗi DB';
+        return false;
+      }
+    });
     count = results.filter(r => r === true).length;
 
     if (count === 0 && students.length > 0) {
@@ -370,9 +384,8 @@ export const importStudentsExcel = async (req: Request, res: Response) => {
 
 export const getStudentTemplate = async (req: Request, res: Response) => {
   try {
-    const ExcelJS = await import('exceljs');
-    const ExcelJSModule = (ExcelJS.default || ExcelJS) as any;
-    const workbook = new ExcelJSModule.Workbook();
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Sinh Viên Mẫu');
 
     worksheet.columns = [
@@ -400,10 +413,7 @@ export const getStudentTemplate = async (req: Request, res: Response) => {
       class_id: 'CNTT1'
     });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="mau-nhap-sinh-vien.xlsx"');
-    res.status(200).send(buffer);
+    await sendWorkbookAsXlsx(res, workbook, 'mau-nhap-sinh-vien.xlsx');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Không thể tạo file mẫu' });
@@ -507,9 +517,8 @@ export const exportStudentAccounts = async (req: Request, res: Response) => {
       ]
     });
 
-    const ExcelJS = await import('exceljs');
-    const ExcelJSModule = (ExcelJS.default || ExcelJS) as any;
-    const workbook = new ExcelJSModule.Workbook();
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Tài khoản sinh viên');
 
     sheet.columns = [
@@ -537,11 +546,7 @@ export const exportStudentAccounts = async (req: Request, res: Response) => {
       });
     });
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="tai-khoan-sinh-vien-${class_id || 'tat-ca'}.xlsx"`);
-    
-    await workbook.xlsx.write(res);
-    res.end();
+    await sendWorkbookAsXlsx(res, workbook, `tai-khoan-sinh-vien-${class_id || 'tat-ca'}.xlsx`);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Lỗi khi xuất danh sách tài khoản' });

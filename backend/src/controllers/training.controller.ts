@@ -8,6 +8,7 @@ import {
   getSemesterWithScope,
   normalizeSemesterName,
 } from '../utils/semester.js';
+import { getExcelJS, sendWorkbookAsXlsx } from '../utils/excel.js';
 
 const parseDetails = (raw: unknown): Record<string, any> => {
   let parsed: unknown = raw;
@@ -536,7 +537,7 @@ export const exportTrainingScoresExcel = async (req: Request, res: Response) => 
   const { class_id, semester } = req.query;
 
   try {
-    const ExcelJS = await import('exceljs');
+    const ExcelJS = await getExcelJS();
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Điểm Rèn Luyện');
 
@@ -588,11 +589,7 @@ export const exportTrainingScoresExcel = async (req: Request, res: Response) => 
       });
     }
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="diem-ren-luyen.xlsx"');
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    res.send(buffer);
+    await sendWorkbookAsXlsx(res, workbook, 'diem-ren-luyen.xlsx');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Export failed' });

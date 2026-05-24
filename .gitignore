@@ -49,6 +49,16 @@ Thumbs.db
 tmp/
 temp/
 .cache/
+*.bak
+*.tmp
+*.orig
+
+# Project-local scratch/debug artifacts
+backend/scratch/
+backend/prisma/*.js
+backend/prisma/*.js.map
+backend/prisma/*.d.ts
+backend/prisma/*.d.ts.map
 
 # Excel temporary files
 ~$*.xlsx

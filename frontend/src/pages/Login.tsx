@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import api from '../api/axios';
+import api, { apiConfigError } from '../api/axios';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -14,7 +14,10 @@ const Login = () => {
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  // Mechanical gear parallax mouse movement state
+  // Dynamic mobile screen and aspect ratio state
+  const [isPhoneRatio, setIsPhoneRatio] = useState(false);
+
+  // Mechanical gear parallax mouse movement state (for desktop layout)
   const [gearTranslation, setGearTranslation] = useState({
     g1: 'translate(0px, 0px)',
     g2: 'translate(0px, 0px)'
@@ -33,9 +36,26 @@ const Login = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Monitor screen resize and aspect ratio to detect typical phone screens
+  useEffect(() => {
+    const checkRatio = () => {
+      const isMobileDevice = window.innerWidth < 768 || (window.innerWidth / window.innerHeight) < 0.85;
+      setIsPhoneRatio(isMobileDevice);
+    };
+    checkRatio();
+    window.addEventListener('resize', checkRatio);
+    return () => window.removeEventListener('resize', checkRatio);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    if (apiConfigError) {
+      toast.error(apiConfigError);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.post('/auth/login', { username, password });
       login(res.data.user);
@@ -45,12 +65,187 @@ const Login = () => {
       const redirectPath = params.get('redirect') || '/';
       navigate(redirectPath, { replace: true });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Đăng nhập thất bại');
+      toast.error(error.response?.data?.message || error.message || 'Đăng nhập thất bại');
     } finally {
       setLoading(false);
     }
   };
 
+  // Dedicated Mobile / Portrait Viewport Layout (100% matched to your exact mobile template)
+  if (isPhoneRatio) {
+    return (
+      <div className="login-root-container bg-blue-700 min-h-screen flex items-center justify-center p-0 m-0 w-full">
+        
+        {/* External fonts and scoped CSS inside component */}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        
+        <style dangerouslySetInnerHTML={{ __html: `
+          .login-root-container {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          }
+          .bg-overlay-phone {
+            background: linear-gradient(rgba(0, 71, 171, 0.7), rgba(0, 71, 171, 0.9)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuCfZi7XSUyiJHW7M-u6jSpHmaoSX6sPz2CQepGVImuNbo-PjQ4Paf3DN2gOOqrmLV3qe2yy6tMsPFDWhfC4fe_89a5QDDHuBSync7Iwvvyj_VV05ecwd5JuXo_5_2lW2VOcMw7vDr4bA_dGIUN5GnLBJl6AOaWLqKeQf0gjgypKmlIcT_EWT90MLepF5pLPJmhBR3kZE125MdokcrtQnst5kYoiWNOyWOVvtdDzBmlXFvOY5OgWXi4rgnReVY8S5VJHEXXmtqI9N5g');
+            background-size: cover;
+            background-position: center;
+          }
+          .btn-primary {
+            transition: all 0.3s ease;
+          }
+          .btn-primary:active {
+            transform: scale(0.98);
+          }
+        ` }} />
+
+        {/* BEGIN: Main Container */}
+        <main className="w-full min-h-screen md:min-h-[812px] md:max-h-[900px] md:my-auto md:rounded-[40px] md:overflow-y-auto max-w-md bg-overlay-phone relative flex flex-col shadow-2xl">
+          
+          {/* BEGIN: Header Section */}
+          <header className="flex flex-col items-center pt-10 pb-6 px-6 z-10" data-purpose="branding">
+            {/* School Logo (Circular) */}
+            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-1 shadow-lg mb-4">
+              <img 
+                alt="CTUT Logo" 
+                className="w-full h-full object-contain rounded-full" 
+                src="https://lh3.googleusercontent.com/aida/ADBb0uj20fseevUoflhcUhx5ivRKjVRH4dyFHPpc4362giDuvVO2MPmb1CmL-zCCWM4wAULEX-PwEJYtpWpAwE9V4McsbJOH2e7CM5O7EVhLvIuLmM4BQOLybMpRv1E6C3bd51GGv7yY13uvdoDgDoKBNgQGFtDaXwxEPS7-wkOPufCjhffVMAm00ZOj_bz64iTXknxmZvpfAPP56c7OQcl8wmScZg5N335xnwQw6fIQfanYCqXV9AjtPSt-YVvkPBj4l9KFDzgV3XxUSA"
+              />
+            </div>
+            <h1 className="text-white text-2xl font-bold tracking-wider uppercase mb-1 drop-shadow-sm text-center">
+              Đăng Nhập Hệ Thống
+            </h1>
+            <div className="flex items-center w-full max-w-[240px] justify-center">
+              <div className="flex-grow h-[1px] bg-blue-300 opacity-50"></div>
+              <span className="px-3 text-blue-100 text-xs font-semibold whitespace-nowrap uppercase tracking-widest">
+                Khoa Kỹ Thuật Cơ Khí
+              </span>
+              <div className="flex-grow h-[1px] bg-blue-300 opacity-50"></div>
+            </div>
+          </header>
+          {/* END: Header Section */}
+
+          {/* BEGIN: Login Form Card */}
+          <section className="flex-grow bg-white rounded-t-[40px] px-8 pt-10 pb-12 shadow-inner z-10 mt-4" data-purpose="login-card">
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              
+              {/* Username Input */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-800 ml-1" htmlFor="username">Tên đăng nhập</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-600">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                    </svg>
+                  </div>
+                  <input 
+                    className="block w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Nhập tên đăng nhập" 
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-800 ml-1" htmlFor="password">Mật khẩu</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-600">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                    </svg>
+                  </div>
+                  <input 
+                    className="block w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Nhập mật khẩu" 
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button 
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600" 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      {showPassword ? (
+                        <path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                      ) : (
+                        <>
+                          <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                          <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                        </>
+                      )}
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Options: Remember and Forgot */}
+              <div className="flex items-center justify-between py-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input 
+                    className="w-5 h-5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer" 
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span className="text-sm font-medium text-gray-700">Ghi nhớ đăng nhập</span>
+                </label>
+                <a 
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-800" 
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); toast.success('Vui lòng liên hệ Văn phòng Khoa để đặt lại mật khẩu.'); }}
+                >
+                  Quên mật khẩu?
+                </a>
+              </div>
+
+              {/* Submit Button */}
+              <button 
+                className="btn-primary w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-75 disabled:cursor-not-allowed" 
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    <span>Đăng nhập</span>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 5l7 7m0 0l-7 7m7-7H3" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                    </svg>
+                  </>
+                )}
+              </button>
+
+              {/* Security Notice Footer */}
+              <div className="mt-8 p-4 bg-blue-50 rounded-2xl flex items-center space-x-4 border border-blue-100" data-purpose="security-notice">
+                <div className="bg-blue-600 p-2 rounded-xl text-white">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h4 className="text-sm font-bold text-gray-900">Bảo mật thông tin của bạn</h4>
+                  <p className="text-xs text-gray-600">Là ưu tiên hàng đầu của chúng tôi.</p>
+                </div>
+              </div>
+            </form>
+          </section>
+          {/* END: Login Form Card */}
+        </main>
+        {/* END: Main Container */}
+      </div>
+    );
+  }
+
+  // Gorgeous Split Screen Desktop Layout (100% responsive for horizontal / laptop ratios)
   return (
     <div className="login-root-container bg-transparent lg:bg-background font-body-md text-on-surface overflow-x-hidden min-h-screen relative w-full">
       
@@ -68,12 +263,14 @@ const Login = () => {
             display: none !important;
           }
           .login-main-container {
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-            min-height: calc(100vh - 60px) !important;
+            padding-top: 2rem !important;
+            padding-bottom: 6rem !important;
+            min-height: 100vh !important;
           }
           .login-card-wrapper {
-            margin-top: 3.5rem !important;
+            margin-top: 0 !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
           }
         }
         
@@ -93,10 +290,6 @@ const Login = () => {
 
         .bg-overlay {
           background: linear-gradient(180deg, rgba(0, 20, 50, 0.35) 0%, rgba(0, 50, 120, 0.75) 45%, rgba(0, 30, 80, 0.92) 100%);
-        }
-
-        .bg-overlay-mobile {
-          background: linear-gradient(180deg, rgba(0, 86, 210, 0.7) 0%, rgba(0, 86, 210, 0.95) 100%);
         }
 
         .input-glow:focus-within {
@@ -176,194 +369,7 @@ const Login = () => {
         }
       ` }} />
 
-      {/* Mobile Layout (99% matched to your exact HTML template) - Visible only on mobile/tablet */}
-      <div className="block lg:hidden min-h-screen w-full flex flex-col items-center justify-start overflow-x-hidden relative">
-        
-        {/* Background Image and Overlay */}
-        <div className="fixed inset-0 z-[-1] lg:hidden">
-          <img 
-            alt="CTUT Building" 
-            className="w-full h-full object-cover" 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVQML7G7lJ1p3ZJX6GJVSCJ4kIg-Eg1TiVQGAoWC9as8hyd9-SrPbu0k8TZupLcG7_PWoxF2taka-S3HWhuEvHiUlxGnqweK2ToVN1uoFdrz7WMtSND9Uf5YFuqyXw8_Fuu14GNRX_5bI1gCY4F9x2E7LwiayhZ10YmJuDMs2yNcxv14UJA8ItsmvEcNfxDrVcK8m-R-VOIVp0gooAAQnGp-WZkyCxosjRqSA7E3RWgKa4WA9Jxh2gr5JClG3QFu8qOORKtZJGl_yR"
-          />
-          <div className="absolute inset-0 bg-overlay-mobile"></div>
-        </div>
-
-        {/* Header Content */}
-        <header className="w-full pt-12 pb-6 px-6 flex flex-col items-center text-center space-y-4" data-purpose="branding">
-          {/* Logo */}
-          <div className="w-24 h-24 mb-2">
-            <img 
-              alt="CTUT Logo" 
-              className="w-full h-full object-contain" 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoKC0LG1y-eAqSD2k6uJpid9Lv6A5jlOwpjNqe1df7rjcVoda64tq0c1BHrKhxNpe-1MUswDIGjSD1QgQMU8hGfm1KbGW4zi6y6RrtZCxoI1Vcv1AQiA_IjcfKIjjcFiD9DqlnfjTfpoXx2cryXKUUV26PaEyb9hghAJ2_9HRsF7S7_71SfVS3s0-azEqM-0jwB6NktFSBgImsESzEOOj4Daj6-U4VXcisVtCs7oMwMwa7rdKkJQG7t2ovhPY_I8M0FmZsRO9c0lqI"
-            />
-          </div>
-          {/* Branding Text */}
-          <div className="space-y-1">
-            <h2 className="text-slate-800 font-bold text-lg tracking-wide uppercase leading-tight">
-              Trường Đại học Kỹ thuật - Công nghệ Cần Thơ
-            </h2>
-            <div className="flex items-center justify-center space-x-2">
-              <div className="h-[1px] w-8 bg-slate-400"></div>
-              <span className="text-slate-700 font-semibold text-sm uppercase tracking-widest">
-                Khoa Kỹ thuật Cơ khí
-              </span>
-              <div className="h-[1px] w-8 bg-slate-400"></div>
-            </div>
-          </div>
-          <h1 className="text-slate-800 font-bold text-2xl pt-4">
-            ĐĂNG NHẬP HỆ THỐNG
-          </h1>
-        </header>
-
-        {/* Main Login Card */}
-        <main className="w-[92%] max-w-[440px] mx-auto mt-4 bg-white rounded-[40px] px-8 pt-10 pb-12 shadow-2xl mb-8 relative z-10" data-purpose="login-form-container">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Username Field */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-800" htmlFor="username">Tên đăng nhập</label>
-              <div className="input-field flex items-center border border-slate-200 rounded-xl px-4 py-4 transition-all bg-white">
-                <svg className="h-5 w-5 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                </svg>
-                <input 
-                  className="w-full outline-none text-slate-700 border-none p-0 focus:ring-0 placeholder-slate-400 text-sm" 
-                  id="username" 
-                  placeholder="Nhập tên đăng nhập" 
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-800" htmlFor="password">Mật khẩu</label>
-              <div className="input-field flex items-center border border-slate-200 rounded-xl px-4 py-4 transition-all bg-white">
-                <svg className="h-5 w-5 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                </svg>
-                <input 
-                  className="w-full outline-none text-slate-700 border-none p-0 focus:ring-0 placeholder-slate-400 text-sm" 
-                  id="password" 
-                  placeholder="Nhập mật khẩu" 
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button 
-                  className="text-slate-400 ml-2 focus:outline-none" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  type="button"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Actions Area */}
-            <div className="flex items-center justify-between py-2">
-              <label className="flex items-center cursor-pointer select-none">
-                <input 
-                  className="rounded border-slate-300 text-[#0056d2] focus:ring-[#0056d2] h-5 w-5 mr-2 cursor-pointer" 
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span className="text-sm text-slate-700 font-medium">Ghi nhớ đăng nhập</span>
-              </label>
-              <a 
-                className="text-sm font-semibold text-[#0056d2] hover:underline" 
-                href="#"
-                onClick={(e) => { e.preventDefault(); toast.success('Vui lòng liên hệ Văn phòng Khoa để đặt lại mật khẩu.'); }}
-              >
-                Quên mật khẩu?
-              </a>
-            </div>
-
-            {/* Submit Button */}
-            <button 
-              className="w-full bg-[#0056d2] text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform disabled:opacity-75 disabled:cursor-not-allowed" 
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>
-                  <span>Đăng nhập</span>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 5l7 7m0 0l-7 7m7-7H3" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                  </svg>
-                </>
-              )}
-            </button>
-
-            {/* Security Info Box */}
-            <div className="bg-blue-50/50 rounded-2xl p-5 flex items-center space-x-4 border border-blue-100" data-purpose="security-info">
-              <div className="bg-[#0056d2] p-2.5 rounded-full text-white">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                </svg>
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[#0056d2] font-bold text-sm">Bảo mật thông tin của bạn</span>
-                <span className="text-slate-500 text-xs mt-0.5 leading-relaxed">Là ưu tiên hàng đầu của chúng tôi.</span>
-              </div>
-            </div>
-          </form>
-        </main>
-
-        {/* Bottom Utilities */}
-        <section className="w-full bg-white px-6 pb-8 space-y-4" data-purpose="info-cards">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center">
-              <div className="text-[#0056d2] mb-1">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                </svg>
-              </div>
-              <span className="text-[10px] font-bold text-slate-700">Bảo mật</span>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center">
-              <div className="text-[#0056d2] mb-1">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13 10V3L4 14h7v7l9-11h-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                </svg>
-              </div>
-              <span className="text-[10px] font-bold text-slate-700">Nhanh chóng</span>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center">
-              <div className="text-[#0056d2] mb-1">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                </svg>
-              </div>
-              <span className="text-[10px] font-bold text-slate-700">Hỗ trợ</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="w-full bg-[#0056d2] py-4 px-6 text-center" data-purpose="site-footer">
-          <p className="text-white/60 text-[10px] leading-relaxed">
-            © 2024 Khoa Kỹ thuật Cơ khí - CTUT. Bảo lưu mọi quyền.<br/>
-            Phát triển bởi Trung tâm CNTT & TT.
-          </p>
-          <div className="h-6 w-full"></div>
-        </footer>
-
-      </div>
-
-      {/* Desktop Layout (gorgeous split screen view) - Visible only on desktop */}
-      <div className="hidden lg:block min-h-screen relative w-full">
+      <div className="block min-h-screen relative w-full">
         {/* Top Navigation Bar */}
         <header className="flex justify-end items-center w-full px-8 py-4 absolute z-50 bg-transparent">
           <div className="flex items-center gap-4">
@@ -373,7 +379,7 @@ const Login = () => {
         </header>
 
         {/* Main Content Container */}
-        <main className="login-main-container relative min-h-screen w-full flex items-center justify-center py-20 px-10 overflow-hidden">
+        <main className="login-main-container relative min-h-screen w-full flex flex-col pt-8 pb-24 px-4 md:px-10">
           
           {/* Background Image with Overlay */}
           <div className="absolute inset-0 z-0">
@@ -399,7 +405,7 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="container mx-auto relative z-20 flex flex-row items-center justify-between gap-12 max-w-7xl">
+          <div className="container mx-auto my-auto relative z-20 flex flex-col lg:flex-row items-center justify-between gap-12 max-w-7xl">
             
             {/* Left Side: Branding & Info */}
             <div className="login-branding-panel flex w-1/2 text-white flex-col gap-8">
@@ -585,12 +591,12 @@ const Login = () => {
         {/* Footer Area */}
         <footer className="absolute bottom-4 w-full flex justify-between items-center px-8 z-30">
           <div className="text-label-md font-bold text-white/90">
-            © 2024 Khoa Kỹ thuật Cơ khí - Trường Đại học Kỹ thuật - Công nghệ Cần Thơ
+            © 2026 Khoa Kỹ thuật Cơ khí - Trường Đại học Kỹ thuật - Công nghệ Cần Thơ
           </div>
           <div className="flex items-center gap-6">
-            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Chính sách bảo mật</a>
-            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Điều khoản sử dụng</a>
-            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="#">Liên hệ hệ thống</a>
+            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="/chinhsachbaomat.html">Chính sách bảo mật</a>
+            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="/dieukhoansudung.html">Điều khoản sử dụng</a>
+            <a className="text-label-md font-bold text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline" href="/thongtinlienhe.html">Thông tin liên hệ</a>
           </div>
         </footer>
       </div>
