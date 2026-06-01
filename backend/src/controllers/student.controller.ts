@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
 import { getExcelJS, sendWorkbookAsXlsx } from '../utils/excel.js';
+import type { AuthRequest } from '../types/index.js';
 
 const IMPORT_BATCH_SIZE = 25;
 
@@ -320,11 +321,10 @@ export const importStudentsExcel = async (req: Request, res: Response) => {
       try {
         if (student.class_id && student.class_id !== 'Chưa xếp lớp') {
           await (prisma as any).class.upsert({
-            where: { id: student.class_id },
+            where: { name: student.class_id },
             update: {},
             create: {
-              id: student.class_id,
-              name: `Lớp ${student.class_id}`
+              name: student.class_id
             }
           });
         }
@@ -606,5 +606,164 @@ export const getStudentStats = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Lỗi khi lấy thống kê sinh viên' });
+  }
+};
+
+export const getDashboardStats = async (req: AuthRequest, res: Response) => {
+  const role = String(req.user?.role || '').toUpperCase();
+  const classId = role === 'BCH' ? String(req.user?.class_id || '').trim() : '';
+  const studentWhere = classId ? { class_id: classId } : {};
+  const trainingWhere: Record<string, any> = classId ? { student: { class_id: classId } } : {};
+  const sessionWhere: Record<string, any> = {
+    isActive: true,
+    ...(classId ? { class_id: classId } : {}),
+  };
+
+  try {
+    const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - index));
+      date.setHours(0, 0, 0, 0);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      return { date, nextDate, label: `${date.getDate()}/${date.getMonth() + 1}` };
+    });
+
+    const [
+      totalStudents,
+      pendingDRL,
+      activeSessionsCount,
+      approvedAggregate,
+      activeSessions,
+      pendingScores,
+      semesters,
+      chartCounts,
+    ] = await Promise.all([
+      prisma.student.count({ where: studentWhere }),
+      prisma.trainingScore.count({
+        where: {
+          ...trainingWhere,
+          status: 'PENDING',
+        },
+      }),
+      prisma.attendanceSession.count({ where: sessionWhere }),
+      prisma.trainingScore.aggregate({
+        where: {
+          ...trainingWhere,
+          status: 'APPROVED',
+        },
+        _avg: {
+          total: true,
+          admin_total: true,
+        },
+      }),
+      prisma.attendanceSession.findMany({
+        where: sessionWhere,
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          session_type: true,
+          class_id: true,
+          qrToken: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+      }),
+      prisma.trainingScore.findMany({
+        where: {
+          ...trainingWhere,
+          status: 'PENDING',
+        },
+        select: {
+          id: true,
+          status: true,
+          student: {
+            select: {
+              name: true,
+              student_code: true,
+              class_id: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      (prisma as any).semester.findMany({
+        select: { name: true },
+        orderBy: [{ startDate: 'desc' }, { name: 'desc' }],
+        take: 1,
+      }),
+      Promise.all(
+        lastSevenDays.map((item) =>
+          prisma.attendanceSession.count({
+            where: {
+              ...(classId ? { class_id: classId } : {}),
+              sessionDate: {
+                gte: item.date,
+                lt: item.nextDate,
+              },
+            },
+          }),
+        ),
+      ),
+    ]);
+
+    const avgTotal = approvedAggregate._avg.admin_total ?? approvedAggregate._avg.total;
+    const activities = [
+      ...activeSessions.map((session) => ({
+        id: `session-${session.id}`,
+        type: 'attendance',
+        title: 'Phiên điểm danh mới',
+        subtitle: `${session.title || session.subject || 'Phiên'} - ${session.class_id || 'Hoạt động chung'}`,
+        time: 'Mới',
+        color: 'bg-emerald-500',
+      })),
+      ...pendingScores.slice(0, 3).map((score) => ({
+        id: `drl-${score.id}`,
+        type: 'drl',
+        title: 'Duyệt phiếu DRL',
+        subtitle: `${score.student?.name || 'Sinh viên'} - ${score.student?.student_code || score.id}`,
+        time: 'Chờ duyệt',
+        color: 'bg-amber-500',
+      })),
+    ].slice(0, 5);
+
+    const notifications = [
+      ...activeSessions.map((session) => ({
+        id: `notif-session-${session.id}`,
+        title: `${session.session_type === 'QR_CLASS' ? 'Phiên điểm danh học phần' : 'Phiên hoạt động'} ${session.title || ''}`.trim(),
+        badge: 'Đang mở',
+        badgeColor: 'bg-emerald-100 text-emerald-700',
+        time: 'Hôm nay',
+      })),
+      ...pendingScores.slice(0, 2).map((score) => ({
+        id: `notif-drl-${score.id}`,
+        title: `${score.student?.name || `DRL_${score.id}`} - Chờ duyệt`,
+        badge: 'Chờ duyệt',
+        badgeColor: 'bg-amber-100 text-amber-700',
+        time: 'Gần đây',
+      })),
+    ].slice(0, 5);
+
+    return res.json({
+      stats: {
+        totalStudents,
+        pendingDRL,
+        activeSessions: activeSessionsCount,
+        avgDRL: avgTotal === null || avgTotal === undefined ? null : Math.round(Number(avgTotal) * 10) / 10,
+      },
+      activeSemester: semesters[0]?.name || '',
+      activities,
+      notifications,
+      chartData: lastSevenDays.map((item, index) => ({
+        date: item.label,
+        value: chartCounts[index] || 0,
+      })),
+    });
+  } catch (error) {
+    console.error('getDashboardStats error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

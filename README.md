@@ -1,143 +1,251 @@
-# 🎓 Hệ thống Quản trị Sinh viên Thông minh & Đánh giá Điểm rèn luyện Toàn diện
+# QLSV - Hệ thống quản lý sinh viên
 
-![Version](https://img.shields.io/badge/version-2.0.0--stable-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/License-Copyrighted-red?style=for-the-badge)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
+QLSV là ứng dụng web hỗ trợ quản lý sinh viên, lớp học, học kỳ, điểm rèn luyện, điểm danh QR và các hoạt động liên quan đến công tác quản lý lớp/đào tạo.
 
-**Hệ thống Quản lý Sinh viên (QLSV)** là giải pháp phần mềm được thiết kế để chuẩn hóa và tự động hóa quy trình quản lý học thuật, đánh giá rèn luyện và theo dõi chuyên cần. Dự án tập trung vào trải nghiệm người dùng cao cấp (Premium UX), bảo mật dữ liệu và hiệu năng tối ưu.
+Dự án gồm 2 phần chính:
 
----
+- `backend`: API Node.js/Express, Prisma ORM, PostgreSQL.
+- `frontend`: giao diện React + TypeScript + Vite.
 
-## 💎 Kiến trúc Công nghệ Chi tiết (Detailed Tech Stack)
+## Tính năng chính
 
-Hệ thống được xây dựng trên một nền tảng công nghệ đồng bộ, đảm bảo tính ổn định và hiệu suất cao nhất:
+- Đăng nhập, đăng xuất và phân quyền theo vai trò `ADMIN`, `BCH`, `STUDENT`.
+- Quản lý sinh viên, lớp, học kỳ và tài khoản.
+- Quản lý điểm rèn luyện, tự đánh giá, xét duyệt và nộp minh chứng.
+- Điểm danh bằng QR cho lớp học hoặc hoạt động.
+- Quản lý sự kiện và trang đăng ký công khai tại `/dangky`.
+- Quản lý yêu cầu hỗ trợ từ trang liên hệ công khai.
+- Chatbot hỗ trợ sinh viên khi có cấu hình khóa API AI.
+- Xuất/nhập dữ liệu liên quan bằng Excel.
 
+## Công nghệ sử dụng
 
-### 🎨 Frontend - Giao diện & Trải nghiệm
-- **Ngôn ngữ Core**: [TypeScript](https://www.typescriptlang.org/) - Đảm bảo an toàn kiểu dữ liệu (Type-safe) và giảm thiểu lỗi logic trong quá trình phát triển.
-- **Thư viện chính**: [React 18](https://react.dev/) - Tận dụng sức mạnh của Concurrent Mode và Hooks để tối ưu hóa hiệu năng rendering.
-- **Build Tool**: [Vite](https://vitejs.dev/) - Công cụ đóng gói mã nguồn thế hệ mới, cho phép Hot Module Replacement (HMR) cực nhanh.
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) - Framework CSS tiện ích giúp xây dựng giao diện tùy biến, responsive và tối ưu dung lượng tệp CSS đầu ra.
-- **Quản lý trạng thái**: [Zustand](https://zustand-demo.pmnd.rs/) - Giải pháp quản lý state gọn nhẹ nhưng mạnh mẽ, thay thế cho Redux cồng kềnh.
-- **Thành phần bổ trợ**:
-  - `Lucide React`: Bộ icon vector sắc nét, đồng bộ.
-  - `React Router Dom v6`: Quản lý điều hướng trang linh hoạt.
-  - `React Hot Toast`: Hệ thống thông báo (notifications) mượt mà.
-  - `Axios`: Xử lý các yêu cầu HTTP API với cơ chế Interceptor bảo mật.
+### Backend
 
-### ⚙️ Backend - Xử lý & Nghiệp vụ
-- **Runtime**: [Node.js](https://nodejs.org/) - Môi trường chạy JavaScript phía máy chủ với hiệu suất xử lý bất đồng bộ (I/O) vượt trội.
-- **Framework**: [Express.js](https://expressjs.com/) - Framework tối giản, linh hoạt cho việc xây dựng RESTful APIs chuyên nghiệp.
-- **Database ORM**: [Prisma](https://www.prisma.io/) - Công cụ quản lý cơ sở dữ liệu thế hệ mới, tự động hóa việc tạo migration và cung cấp Type-safe Client.
-- **Bảo mật & Xác thực**:
-  - `JWT (JSON Web Token)`: Cơ chế xác thực không trạng thái (stateless) an toàn.
-  - `bcrypt`: Thuật toán mã hóa mật khẩu một chiều cấp độ quân đội.
-  - `CORS`: Cấu hình chia sẻ tài nguyên giữa các nguồn gốc khác nhau.
-- **Lưu trữ**: Tích hợp Cloudflare R2 (S3-Compatible) hoặc File System tùy biến.
+- Node.js 20+
+- Express 5
+- TypeScript
+- Prisma
+- PostgreSQL
+- JWT, cookie, CSRF middleware
+- Multer, Sharp, ExcelJS
+- Tùy chọn: Gmail SMTP, Cloudflare R2, Google GenAI/Gemini
 
-### 📊 Cơ sở dữ liệu (Database)
-- Hỗ trợ tốt nhất trên **MySQL 8.0** hoặc **PostgreSQL**, được thiết kế chuẩn hóa để xử lý các truy vấn quan hệ phức tạp giữa Sinh viên, Học kỳ và Điểm rèn luyện.
+### Frontend
 
----
+- React 19
+- TypeScript
+- Vite
+- React Router
+- Zustand
+- Tailwind CSS
+- Axios
+- Recharts
+- QR Code / HTML5 QR scanner
 
-## 🛠️ Hệ thống Tính năng 
-
-### 1. Phân hệ Điểm rèn luyện (DRL Evaluation)
--   **Cơ chế đánh giá đa tầng**: Sinh viên tự chấm -> Lớp kiểm tra -> Admin phê duyệt.
--   **Evidence Management**: Hệ thống quản lý minh chứng thông minh, cho phép upload đa định dạng.
--   **Premium Viewer**: Trình xem ảnh/PDF tích hợp Portal, hỗ trợ xoay, thu phóng và điều hướng mượt mà không làm gián đoạn luồng làm việc.
-
-#### Tài liệu nghiệp vụ minh chứng
--   Xem quy trình nộp và duyệt minh chứng tại [docs/evidence-flow.md](docs/evidence-flow.md).
--   Tài liệu này mô tả endpoint backend, luồng frontend và payload tương ứng trong source code hiện tại.
-
-### 2. Phân hệ Chuyên cần QR (Smart Attendance)
--   **Dynamic QR Generation**: Mã QR được tạo động theo thời gian thực và vị trí lớp học.
--   **Security Check-in**: Ngăn chặn gian lận điểm danh qua cơ chế xác thực phiên làm việc.
-
-### 3. Quản trị Học kỳ & Lớp học
--   **Flexible Scoping**: Cấu hình học kỳ linh hoạt, áp dụng cho toàn hệ thống hoặc từng đơn vị lớp cụ thể.
--   **Data Migration**: Nhập xuất dữ liệu hàng loạt qua Excel với công cụ xử lý dữ liệu (Bulk Import/Export) tối ưu.
-
-### 4. Phân quyền tài khoản
--   **Flexible Scoping**: Cấu hình quyền hạn linh hoạt, áp dụng cho toàn hệ thống hoặc từng đơn vị lớp cụ thể.
-
-
----
-
-## 📂 Cấu trúc Hệ thống (System Structure)
+## Cấu trúc thư mục
 
 ```text
 qlsv/
-├── backend/                # Server-side High Performance Core
-│   ├── prisma/             # Database Schemas & Migrations
-│   ├── src/                # Business Logic Implementation
-│   │   ├── controllers/    # API Request Handlers
-│   │   ├── middleware/     # Security & Auth Guards
-│   │   ├── routes/         # API Endpoint Definitions
-│   │   └── services/       # Core Business Logic
-│   └── uploads/            # Local Backup Storage
-├── frontend/               # Premium Client Application
-│   ├── src/
-│   │   ├── components/     # Reusable UI Components (Bento Grid, Glassmorphism)
-│   │   ├── layout/         # Application Shells & Navigation
-│   │   ├── pages/          # Feature Modules (Evaluation, Dashboard, Admin)
-│   │   └── store/          # Global State Store (Zustand)
-│   └── public/             # Static Assets & Icons
-├── skills/                 # Internal Tooling & Deployment Scripts
-└── README.md               # Professional Documentation
+|-- backend/               # Mã nguồn API
+|   |-- prisma/            # Prisma schema, seed và database scripts
+|   `-- src/
+|       |-- controllers/   # Xử lý nghiệp vụ
+|       |-- middleware/    # Auth, CSRF, rate limit, security headers
+|       |-- routes/        # Khai báo API routes
+|       `-- utils/         # Cấu hình, Prisma, email, storage...
+|-- frontend/              # Mã nguồn giao diện React
+|   |-- public/            # Tài nguyên tĩnh và trang công khai
+|   `-- src/
+|       |-- components/    # Component dùng chung
+|       |-- layout/        # Layout và sidebar
+|       |-- pages/         # Các trang chức năng
+|       |-- store/         # Auth store
+|       `-- utils/         # Hàm hỗ trợ frontend
+`-- README.md
 ```
 
----
+## Yêu cầu trước khi cài đặt
 
-## ⚡ Hướng dẫn Triển khai (Deployment Guide)
+- Node.js từ `20` đến dưới `25`.
+- npm.
+- PostgreSQL hoặc một PostgreSQL database đã deploy sẵn.
 
-### Bước 1: Chuẩn bị Môi trường
--   Yêu cầu: Node.js (phiên bản Long Term Support), NPM/Yarn.
--   Cơ sở dữ liệu: MySQL 8.0+ hoặc PostgreSQL 14+.
+## Cài đặt
 
-### Bước 2: Thiết lập Backend
+Tại thư mục gốc của dự án:
+
 ```bash
 cd backend
 npm install
-# Cấu hình file .env dựa trên .env.example (DATABASE_URL, JWT_SECRET, R2_CONFIG, PORT=5000)
-npx prisma generate
-npx prisma db push
-npm run dev
+
+cd ../frontend
+npm install
 ```
 
-### Bước 3: Thiết lập Frontend
+## Cấu hình môi trường
+
+### Backend
+
+Tạo file `backend/.env` từ file mẫu:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Cập nhật các biến bắt buộc:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require
+JWT_SECRET=replace_with_a_strong_secret_at_least_32_chars
+FRONTEND_ORIGIN=http://localhost:5173
+NODE_ENV=development
+PORT=5000
+```
+
+Khi deploy production và frontend/backend khác domain, cần cấu hình thêm:
+
+```env
+COOKIE_SAME_SITE=none
+COOKIE_SECURE=true
+```
+
+### Frontend
+
+Tạo file `frontend/.env` từ file mẫu:
+
 ```bash
 cd frontend
-npm install
-# Cấu hình file .env dựa trên .env.example (VITE_API_URL)
+cp .env.example .env
+```
+
+Cấu hình mặc định khi chạy local:
+
+```env
+VITE_API_URL=/api
+VITE_API_TARGET=http://localhost:5000
+```
+
+Vite sẽ proxy các request `/api` sang backend local.
+
+## Khởi tạo database
+
+Chạy Prisma migrate và seed dữ liệu ban đầu:
+
+```bash
+cd backend
+npm run prisma:migrate
+npm run prisma:seed
+```
+
+Tài khoản admin mặc định được tạo bởi seed:
+
+```text
+Tên đăng nhập: admin
+Mật khẩu: admin123
+```
+
+Nên đổi mật khẩu ngay sau lần đăng nhập đầu tiên.
+
+## Cách chạy dự án
+
+Mở 2 terminal riêng.
+
+Terminal 1 - chạy backend:
+
+```bash
+cd backend
 npm run dev
 ```
 
----
+Backend mặc định chạy tại:
 
-## 🔒 Bản quyền & Bảo mật (Copyright & Security)
+```text
+http://localhost:5000
+```
 
-> [!IMPORTANT]
-> **THÔNG BÁO BẢN QUYỀN TRÍ TUỆ**
-> 
-> Toàn bộ mã nguồn, thiết kế giao diện (UI/UX), cấu trúc dữ liệu và logic nghiệp vụ thuộc quyền sở hữu trí tuệ của **LÊ KHÁNH DUY**. 
-> 
-> 1. **Nghiêm cấm sao chép**: Không được phép sao chép, chỉnh sửa hoặc tái phân phối bất kỳ phần nào của dự án này khi chưa có sự đồng ý bằng văn bản của tác giả.
-> 2. **Sử dụng thương mại**: Việc sử dụng dự án cho mục đích thương mại mà không có giấy phép hợp lệ là vi phạm pháp luật.
-> 3. **Bảo mật**: Mọi hành vi xâm nhập trái phép hoặc can thiệp vào mã nguồn nhằm mục đích phá hoại sẽ bị xử lý theo quy định.
+Terminal 2 - chạy frontend:
 
-**© 2026 LÊ KHÁNH DUY. All Rights Reserved.**
+```bash
+cd frontend
+npm run dev
+```
 
----
+Frontend mặc định chạy tại:
 
-## 📞 Liên hệ (Contact Information)
+```text
+http://localhost:5173
+```
 
-Mọi thắc mắc về bản quyền, hỗ trợ kỹ thuật hoặc yêu cầu tùy biến hệ thống, vui lòng liên hệ qua:
+Sau đó truy cập `http://localhost:5173/login` để đăng nhập.
 
--   **Tác giả**: Lê Khánh Duy
--   **Vai trò**: 
--   **Email**: [toi05022020@gmail.com]
--   **Dự án**: Hệ thống QLSV v1.0
+## Cách dùng cơ bản
+
+1. Đăng nhập bằng tài khoản `admin`.
+2. Tạo hoặc cập nhật lớp học, học kỳ và danh sách sinh viên.
+3. Tạo tài khoản cho sinh viên/BCH nếu cần phân quyền riêng.
+4. Quản lý điểm rèn luyện tại các màn hình DRL, xét duyệt và minh chứng.
+5. Tạo phiên điểm danh QR cho lớp hoặc hoạt động.
+6. Sinh viên đăng nhập để xem dashboard, tự đánh giá, nộp minh chứng và quét QR điểm danh.
+7. Dùng trang `/dangky` cho đăng ký sự kiện công khai.
+8. Dùng trang `/thongtinlienhe.html` để gửi yêu cầu hỗ trợ công khai.
+
+## Build và chạy production
+
+### Backend
+
+```bash
+cd backend
+npm run build
+npm start
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm run build
+npm run preview
+```
+
+Thư mục build frontend nằm tại `frontend/dist`.
+
+## Kiểm tra mã nguồn
+
+Frontend có cấu hình ESLint:
+
+```bash
+cd frontend
+npm run lint
+```
+
+Backend hiện chưa có script test riêng. Có thể kiểm tra TypeScript/backend build bằng:
+
+```bash
+cd backend
+npm run build
+```
+
+## Ghi chú triển khai
+
+- `FRONTEND_ORIGIN` phải trùng với domain frontend để CORS và cookie hoạt động đúng.
+- Khi dùng Vercel/Render hoặc hai domain khác nhau, đặt `COOKIE_SAME_SITE=none` và `COOKIE_SECURE=true`.
+- Không đưa file `.env`, khóa API, mật khẩu database hoặc `JWT_SECRET` lên Git.
+- Nếu dùng upload minh chứng lên Cloudflare R2, cấu hình các biến `R2_*` trong `backend/.env`.
+- Nếu dùng email thông báo, cấu hình `GMAIL_USER`, `GMAIL_APP_PASSWORD` và `MAIL_FROM`.
+- Nếu dùng chatbot, cấu hình `GEMINI_API_KEY` và `GEMINI_MODEL`.
+
+## Thông tin liên hệ
+
+- Tác giả: Lê Khánh Duy,Phạm Thái Minh Đăng
+- Email: `toi05022020@gmail.com`
+- Dự án: Hệ thống QLSV
+- Trang liên hệ trong hệ thống: `/thongtinlienhe.html`
+- Yêu cầu hỗ trợ được ghi nhận trong menu `Hỗ trợ` của tài khoản quản trị.
+
+## Bản quyền
+
+© 2026 Lê Khánh Duy. All Rights Reserved.
+
+Toàn bộ mã nguồn, thiết kế giao diện, cấu trúc dữ liệu và logic nghiệp vụ thuộc quyền sở hữu của tác giả. Không sao chép, chỉnh sửa, tái phân phối hoặc sử dụng cho mục đích thương mại khi chưa có sự đồng ý bằng văn bản của tác giả.

@@ -43,6 +43,14 @@ interface NotificationItem {
 
 interface ChartPoint { date: string; value: number }
 
+interface DashboardPayload {
+  stats: DashboardStats;
+  activeSemester: string;
+  activities: ActivityItem[];
+  notifications: NotificationItem[];
+  chartData: ChartPoint[];
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getGreeting = () => {
   const h = new Date().getHours();
@@ -232,110 +240,12 @@ const Dashboard = () => {
     else setRefreshing(true);
 
     try {
-      const [studentsRes, trainingRes, sessionsRes, semestersRes] = await Promise.allSettled([
-        api.get('/students'),
-        api.get('/training'),
-        api.get('/attendance/sessions/active'),
-        api.get('/semesters'),
-      ]);
-
-      const students = studentsRes.status === 'fulfilled' ? studentsRes.value.data : [];
-      const training = trainingRes.status === 'fulfilled'
-        ? (Array.isArray(trainingRes.value.data) ? trainingRes.value.data : [])
-        : [];
-      const sessions = sessionsRes.status === 'fulfilled'
-        ? (Array.isArray(sessionsRes.value.data) ? sessionsRes.value.data : [])
-        : [];
-
-      if (semestersRes.status === 'fulfilled' && Array.isArray(semestersRes.value.data) && semestersRes.value.data.length > 0) {
-        setActiveSemester(semestersRes.value.data[0].name);
-      }
-
-      const pending = training.filter((t: any) => t.status === 'PENDING');
-      const approved = training.filter((t: any) => t.status === 'APPROVED');
-      const avgDRL = approved.length
-        ? approved.reduce((sum: number, t: any) => sum + (t.totalScore ?? 0), 0) / approved.length
-        : null;
-
-      setStats({
-        totalStudents: Array.isArray(students) ? students.length : 0,
-        pendingDRL: pending.length,
-        activeSessions: sessions.length,
-        avgDRL: avgDRL !== null ? Math.round(avgDRL * 10) / 10 : null,
-      });
-
-      // Build activities from real data
-      const acts: ActivityItem[] = [];
-
-      sessions.slice(0, 2).forEach((s: any) => {
-        acts.push({
-          id: `session-${s.id}`,
-          type: 'attendance',
-          title: `Phiên điểm danh mới`,
-          subtitle: `${s.className || s.type || 'Phiên'} — ${s.code || ''}`,
-          time: 'Mới',
-          color: 'bg-emerald-500',
-        });
-      });
-
-      pending.slice(0, 3).forEach((t: any) => {
-        acts.push({
-          id: `drl-${t.id}`,
-          type: 'drl',
-          title: `Duyệt phiếu DRL`,
-          subtitle: `${t.student?.studentId || t.id}`,
-          time: 'Chờ duyệt',
-          color: 'bg-amber-500',
-        });
-      });
-
-      if (Array.isArray(students)) {
-        students.slice(0, 2).forEach((s: any) => {
-          acts.push({
-            id: `student-${s.id}`,
-            type: 'student',
-            title: `Sinh viên: ${s.name}`,
-            subtitle: `Mã SV: ${s.studentId}`,
-            time: 'Gần đây',
-            color: 'bg-blue-500',
-          });
-        });
-      }
-
-      setActivities(acts.slice(0, 5));
-
-      // Build notifications
-      const notifs: NotificationItem[] = [];
-      sessions.slice(0, 3).forEach((s: any) => {
-        notifs.push({
-          id: `notif-session-${s.id}`,
-          title: `${s.type === 'QR_CLASS' ? 'Phiên điểm danh học phần' : 'Phiên hoạt động'} ${s.code || ''}`,
-          badge: 'Đang mở',
-          badgeColor: 'bg-emerald-100 text-emerald-700',
-          time: 'Hôm nay',
-        });
-      });
-      pending.slice(0, 2).forEach((t: any) => {
-        notifs.push({
-          id: `notif-drl-${t.id}`,
-          title: `DRL_${t.id} — Chờ duyệt`,
-          badge: 'Chờ duyệt',
-          badgeColor: 'bg-amber-100 text-amber-700',
-          time: 'Gần đây',
-        });
-      });
-      setNotifications(notifs.slice(0, 5));
-
-      // Build chart (7 days activity simulated from sessions data)
-      const days = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        return {
-          date: `${d.getDate()}/${d.getMonth() + 1}`,
-          value: i === 6 ? sessions.length : Math.max(0, sessions.length - Math.floor(Math.random() * 3)),
-        };
-      });
-      setChartData(days);
+      const res = await api.get<DashboardPayload>('/students/dashboard-stats');
+      setStats(res.data.stats);
+      setActiveSemester(res.data.activeSemester || '');
+      setActivities(res.data.activities || []);
+      setNotifications(res.data.notifications || []);
+      setChartData(res.data.chartData || []);
 
     } catch (err) {
       console.error('Dashboard fetch error', err);

@@ -1,15 +1,33 @@
 import axios, { AxiosHeaders } from 'axios';
 
 const CSRF_STORAGE_KEY = 'csrf_token_fallback';
+const DEVICE_STORAGE_KEY = 'qlsv_device_id';
 const API_ENV_NAME = 'VITE_API_URL';
-const apiBaseUrl = String(import.meta.env.VITE_API_URL || '').trim();
+const DEFAULT_API_BASE_URL = '/api';
+const normalizeApiBaseUrl = (value: unknown) => {
+  const rawValue = String(value || '').trim();
+  const baseUrl = rawValue || DEFAULT_API_BASE_URL;
+  const trimmedBase = baseUrl.replace(/\/+$/, '');
+
+  if (trimmedBase.startsWith('/')) {
+    return trimmedBase || DEFAULT_API_BASE_URL;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedBase);
+    if (!/\/api$/i.test(parsedUrl.pathname)) {
+      parsedUrl.pathname = `${parsedUrl.pathname.replace(/\/+$/, '')}/api`;
+    }
+    return parsedUrl.toString().replace(/\/+$/, '');
+  } catch {
+    return trimmedBase;
+  }
+};
+
+export const apiBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
 let csrfTokenCache = '';
 
 const getApiConfigError = () => {
-  if (!apiBaseUrl) {
-    return `Thiếu biến môi trường ${API_ENV_NAME}. Vui lòng cấu hình ${API_ENV_NAME}=https://your-api-domain/api.`;
-  }
-
   // Relative paths (e.g. /api) are valid — they use Vite proxy and stay same-origin
   if (apiBaseUrl.startsWith('/')) {
     return '';
@@ -28,6 +46,11 @@ const getApiConfigError = () => {
 };
 
 export const apiConfigError = getApiConfigError();
+
+export const buildApiUrl = (path: string) => {
+  const normalizedPath = `/${String(path || '').replace(/^\/+/, '')}`;
+  return `${apiBaseUrl}${normalizedPath}`;
+};
 
 if (apiConfigError) {
   console.error(apiConfigError);
@@ -81,6 +104,21 @@ const getEffectiveCsrfToken = () => {
   return stored;
 };
 
+const getDeviceId = () => {
+  try {
+    const existing = localStorage.getItem(DEVICE_STORAGE_KEY);
+    if (existing) return existing;
+    const generated =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(DEVICE_STORAGE_KEY, generated);
+    return generated;
+  } catch {
+    return '';
+  }
+};
+
 const api = axios.create({
   baseURL: apiBaseUrl,
   withCredentials: true,
@@ -109,6 +147,16 @@ api.interceptors.request.use((config) => {
       } else {
         (config.headers as Record<string, any>)['x-csrf-token'] = String(csrfToken).trim();
       }
+    }
+  }
+
+  const deviceId = getDeviceId();
+  if (deviceId) {
+    config.headers = config.headers || new AxiosHeaders();
+    if (config.headers instanceof AxiosHeaders) {
+      config.headers.set('x-device-id', deviceId);
+    } else {
+      (config.headers as Record<string, any>)['x-device-id'] = deviceId;
     }
   }
 

@@ -9,6 +9,7 @@ import {
   normalizeSemesterName,
 } from '../utils/semester.js';
 import { getExcelJS, sendWorkbookAsXlsx } from '../utils/excel.js';
+import { writeActivityLog } from '../utils/activity-log.js';
 
 const parseDetails = (raw: unknown): Record<string, any> => {
   let parsed: unknown = raw;
@@ -223,6 +224,7 @@ export const createTrainingScore = async (req: AuthRequest, res: Response) => {
     */
 
     let score: any;
+    const action = existingScore ? 'TRAINING_SUBMISSION_UPDATE' : 'TRAINING_SUBMISSION_CREATE';
     if (existingScore) {
       await (prisma as any).$executeRaw`
         UPDATE "TrainingScore"
@@ -268,6 +270,35 @@ export const createTrainingScore = async (req: AuthRequest, res: Response) => {
           },
         });
     }
+
+    await writeActivityLog(req, {
+      action,
+      category: 'DRL',
+      targetType: 'TrainingScore',
+      targetId: score.id,
+      summary: `${score.student?.name || 'Sinh vien'} ${existingScore ? 'cap nhat' : 'nop'} phieu DRL ${semesterName}`,
+      details: {
+        semester: semesterName,
+        previous: existingScore
+          ? {
+              y_thuc: existingScore.y_thuc,
+              hoat_dong: existingScore.hoat_dong,
+              ky_luat: existingScore.ky_luat,
+              total: existingScore.total,
+              status: existingScore.status,
+            }
+          : null,
+        current: {
+          y_thuc: score.y_thuc,
+          hoat_dong: score.hoat_dong,
+          ky_luat: score.ky_luat,
+          total: score.total,
+          status: score.status,
+        },
+      },
+      studentId: score.student_id,
+      classId: score.student?.class_id,
+    });
 
     let submissionEmail = { sent: false, message: 'Sinh viên chưa có email.' };
     
@@ -467,6 +498,32 @@ export const approveTrainingScore = async (req: AuthRequest, res: Response) => {
       if (!updated) {
         throw new Error('Khong tim thay phieu sau khi cap nhat');
       }
+      await writeActivityLog(req, {
+        action: 'TRAINING_APPROVAL_UPDATE',
+        category: 'DRL',
+        targetType: 'TrainingScore',
+        targetId: updated.id,
+        summary: `${updated.student?.name || 'Sinh vien'} duoc cap nhat ket qua duyet DRL: ${updated.status}`,
+        details: {
+          previous: existing
+            ? {
+                status: existing.status,
+                admin_total: existing.admin_total,
+                admin_notes: existing.admin_notes,
+              }
+            : null,
+          current: {
+            status: updated.status,
+            admin_y_thuc: updated.admin_y_thuc,
+            admin_hoat_dong: updated.admin_hoat_dong,
+            admin_ky_luat: updated.admin_ky_luat,
+            admin_total: updated.admin_total,
+            admin_notes: updated.admin_notes,
+          },
+        },
+        studentId: updated.student_id,
+        classId: updated.student?.class_id,
+      });
     } catch (dbError) {
       console.error(`[Approval] RAW SQL update failed for score #${id}:`, dbError);
       return res.status(500).json({ 
@@ -733,6 +790,23 @@ export const submitStudentCustomEvidence = async (req: AuthRequest, res: Respons
       });
     }
 
+    await writeActivityLog(req, {
+      action: 'CUSTOM_EVIDENCE_SUBMIT',
+      category: 'DRL',
+      targetType: 'CustomEvidence',
+      targetId: newItem.id,
+      summary: `Sinh vien nop minh chung "${newItem.activityName}" cho hoc ky ${semName}`,
+      details: {
+        semester: semName,
+        criterionId,
+        points: Number(points),
+        fileCount: files.length,
+        trainingScoreId: existingScore?.id || null,
+      },
+      studentId,
+      classId: req.user?.class_id,
+    });
+
     return res.status(201).json({ message: 'Nộp minh chứng thành công', item: newItem });
   } catch (error) {
     console.error('Error in submitStudentCustomEvidence:', error);
@@ -922,6 +996,23 @@ export const reviewCustomEvidence = async (req: AuthRequest, res: Response) => {
         "updatedAt" = NOW()
       WHERE id = ${score.id}
     `;
+
+    await writeActivityLog(req, {
+      action: 'CUSTOM_EVIDENCE_REVIEW',
+      category: 'DRL',
+      targetType: 'CustomEvidence',
+      targetId: evidenceId,
+      summary: `Cap nhat minh chung "${foundItem.activityName}" sang ${status}`,
+      details: {
+        trainingScoreId: score.id,
+        previousCriterionId: oldCritId,
+        currentCriterionId: targetCritId,
+        status,
+        points: foundItem.points,
+        totals,
+      },
+      studentId: score.student_id,
+    });
 
     return res.json({ message: 'Cập nhật trạng thái minh chứng thành công', totals });
   } catch (error) {

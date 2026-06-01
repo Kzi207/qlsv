@@ -28,6 +28,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const PublicEventRegister = lazy(() => import('./pages/PublicEventRegister'));
 const EventManagement = lazy(() => import('./pages/EventManagement'));
 const SupportManagement = lazy(() => import('./pages/SupportManagement'));
+const ActivityHistory = lazy(() => import('./pages/ActivityHistory'));
 
 const PageFallback = () => (
   <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -102,6 +103,7 @@ function App() {
 
             {/* SHARED ROUTES */}
             <Route path="profile" element={<Profile />} />
+            <Route path="activity-history" element={<RoleRoute allowedRoles={['ADMIN', 'BCH', 'STUDENT']}><ActivityHistory /></RoleRoute>} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="attendance/scan" element={<QRScannerCheckIn />} />
             <Route path="training" element={<TrainingScore />} />

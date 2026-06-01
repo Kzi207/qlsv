@@ -219,7 +219,7 @@ const StudentDashboard = () => {
       {/* ── Top App Bar ────────────────────────────────────────────
           Hiển thị trên mọi màn hình; sidebar desktop đã có trong MainLayout    */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm">
-        <div className="flex justify-between items-center px-4 md:px-6 h-16 max-w-4xl mx-auto">
+        <div className="flex justify-between items-center px-4 md:px-6 h-16 w-full max-w-6xl mx-auto">
           {/* Left: Avatar + Greeting */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-blue-500/20 shrink-0">
@@ -261,7 +261,7 @@ const StudentDashboard = () => {
       </header>
 
       {/* ── Page Content ──────────────────────────────────────────── */}
-      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 space-y-8">
+      <main className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-8">
 
         {/* Welcome */}
         <motion.section

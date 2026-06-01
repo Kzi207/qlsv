@@ -7,18 +7,15 @@ export const CSRF_COOKIE_NAME = 'qlsv_token';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const LOCALHOSTS = new Set(['localhost', '127.0.0.1']);
 
-export const getAllowedOrigins = () => {
-  const configuredOrigins = process.env.FRONTEND_ORIGIN
-    ?.replace(/['"]/g, '')
+const splitEnvList = (value?: string) =>
+  String(value || '')
+    .replace(/['"]/g, '')
     .split(',')
-    .map((origin) => origin.trim())
+    .map((item) => item.trim())
     .filter(Boolean);
 
-  if (configuredOrigins && configuredOrigins.length > 0) {
-    return configuredOrigins;
-  }
-
-  return ['http://localhost:5173'];
+export const getAllowedOrigins = () => {
+  return splitEnvList(process.env.FRONTEND_ORIGIN);
 };
 
 const getHostname = (hostOrOrigin: string) => {
@@ -88,24 +85,20 @@ const getCookieDomain = (req?: Request) => {
     return undefined;
   }
 
-  let configuredDomain = process.env.COOKIE_DOMAIN;
-  if (!configuredDomain) {
-    if (hostname.endsWith('khanhduy.id.vn')) {
-      configuredDomain = 'khanhduy.id.vn';
-    } else if (hostname.endsWith('kzii.site')) {
-      configuredDomain = 'kzii.site';
-    }
-  }
-  if (!configuredDomain) return undefined;
-  if (!req) return configuredDomain;
+  const configuredDomains = splitEnvList(process.env.COOKIE_DOMAIN);
+  if (configuredDomains.length === 0) return undefined;
+  if (!req) return configuredDomains[0];
 
   const originHeader = req.get('origin') || '';
 
-  const matchedHost = hostHeader && isHostMatchingCookieDomain(hostHeader, configuredDomain);
-  const matchedOrigin = originHeader && isHostMatchingCookieDomain(originHeader, configuredDomain);
+  const matchedDomain = configuredDomains.find((domain) => {
+    const matchedHost = hostHeader && isHostMatchingCookieDomain(hostHeader, domain);
+    const matchedOrigin = originHeader && isHostMatchingCookieDomain(originHeader, domain);
+    return matchedHost || matchedOrigin;
+  });
 
-  if (matchedHost || matchedOrigin) {
-    return configuredDomain;
+  if (matchedDomain) {
+    return matchedDomain;
   }
 
   return undefined;
@@ -197,7 +190,7 @@ export const clearAuthCookies = (req: Request, res: Response) => {
     };
   };
 
-  // 1. Clear with configured domain (e.g., .kzii.site)
+  // 1. Clear with configured domain.
   res.cookie(AUTH_COOKIE_NAME, '', deleteOptions(authOptions));
   res.cookie(CSRF_COOKIE_NAME, '', deleteOptions(csrfOptions));
 

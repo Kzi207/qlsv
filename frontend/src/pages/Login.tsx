@@ -5,6 +5,9 @@ import api, { apiConfigError } from '../api/axios';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
+const LOGIN_BACKGROUND_IMAGE_URL = String(import.meta.env.VITE_LOGIN_BACKGROUND_IMAGE_URL || '').trim();
+const LOGIN_LOGO_URL = String(import.meta.env.VITE_LOGIN_LOGO_URL || '').trim();
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -13,6 +16,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
+  const mobileBackgroundStyle = LOGIN_BACKGROUND_IMAGE_URL
+    ? {
+        backgroundImage: `linear-gradient(rgba(0, 71, 171, 0.7), rgba(0, 71, 171, 0.9)), url("${LOGIN_BACKGROUND_IMAGE_URL}")`,
+      }
+    : undefined;
 
   // Dynamic mobile screen and aspect ratio state
   const [isPhoneRatio, setIsPhoneRatio] = useState(false);
@@ -84,7 +92,6 @@ const Login = () => {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           }
           .bg-overlay-phone {
-            background: linear-gradient(rgba(0, 71, 171, 0.7), rgba(0, 71, 171, 0.9)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuCfZi7XSUyiJHW7M-u6jSpHmaoSX6sPz2CQepGVImuNbo-PjQ4Paf3DN2gOOqrmLV3qe2yy6tMsPFDWhfC4fe_89a5QDDHuBSync7Iwvvyj_VV05ecwd5JuXo_5_2lW2VOcMw7vDr4bA_dGIUN5GnLBJl6AOaWLqKeQf0gjgypKmlIcT_EWT90MLepF5pLPJmhBR3kZE125MdokcrtQnst5kYoiWNOyWOVvtdDzBmlXFvOY5OgWXi4rgnReVY8S5VJHEXXmtqI9N5g');
             background-size: cover;
             background-position: center;
           }
@@ -97,17 +104,24 @@ const Login = () => {
         ` }} />
 
         {/* BEGIN: Main Container */}
-        <main className="w-full min-h-screen md:min-h-[812px] md:max-h-[900px] md:my-auto md:rounded-[40px] md:overflow-y-auto max-w-md bg-overlay-phone relative flex flex-col shadow-2xl">
+        <main
+          className="w-full min-h-screen md:min-h-[812px] md:max-h-[900px] md:my-auto md:rounded-[40px] md:overflow-y-auto max-w-md bg-overlay-phone relative flex flex-col shadow-2xl"
+          style={mobileBackgroundStyle}
+        >
           
           {/* BEGIN: Header Section */}
           <header className="flex flex-col items-center pt-10 pb-6 px-6 z-10" data-purpose="branding">
             {/* School Logo (Circular) */}
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-1 shadow-lg mb-4">
-              <img 
-                alt="CTUT Logo" 
-                className="w-full h-full object-contain rounded-full" 
-                src="https://lh3.googleusercontent.com/aida/ADBb0uj20fseevUoflhcUhx5ivRKjVRH4dyFHPpc4362giDuvVO2MPmb1CmL-zCCWM4wAULEX-PwEJYtpWpAwE9V4McsbJOH2e7CM5O7EVhLvIuLmM4BQOLybMpRv1E6C3bd51GGv7yY13uvdoDgDoKBNgQGFtDaXwxEPS7-wkOPufCjhffVMAm00ZOj_bz64iTXknxmZvpfAPP56c7OQcl8wmScZg5N335xnwQw6fIQfanYCqXV9AjtPSt-YVvkPBj4l9KFDzgV3XxUSA"
-              />
+              {LOGIN_LOGO_URL ? (
+                <img 
+                  alt="CTUT Logo" 
+                  className="w-full h-full object-contain rounded-full" 
+                  src={LOGIN_LOGO_URL}
+                />
+              ) : (
+                <span className="text-xl font-black text-blue-700">CTUT</span>
+              )}
             </div>
             <h1 className="text-white text-2xl font-bold tracking-wider uppercase mb-1 drop-shadow-sm text-center">
               Đăng Nhập Hệ Thống
@@ -411,7 +425,13 @@ const Login = () => {
             <div className="login-branding-panel flex w-1/2 text-white flex-col gap-8">
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined bg-white/20 p-2.5 rounded-xl text-white shadow-md">school</span>
+                  <div className="h-14 w-14 shrink-0 rounded-2xl bg-white/95 p-1.5 shadow-xl shadow-blue-950/30">
+                    <img
+                      src="/logo-qlsv.png"
+                      alt="Logo Khoa Kỹ Thuật Cơ Khí"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                   <span className="text-sm font-bold uppercase tracking-widest text-[#ccd8ff] drop-shadow-sm">CỔNG THÔNG TIN</span>
                 </div>
                 <h1 className="font-headline-lg leading-tight md:text-[46px] max-w-xl text-white font-extrabold tracking-tight drop-shadow-2xl" style={{ textShadow: '0 4px 20px rgba(0, 20, 60, 0.6)' }}>

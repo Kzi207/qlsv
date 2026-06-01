@@ -21,6 +21,7 @@ model User {
   studentId   Int?     @unique
   student     Student? @relation(fields: [studentId], references: [id])
   assignments BchAssignment[]
+  activityLogs ActivityLog[]
 }
 
 model Class {
@@ -218,4 +219,32 @@ enum SupportRequestStatus {
   NEW
   IN_PROGRESS
   RESOLVED
+}
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  action     String
+  category   String
+  targetType String?
+  targetId   String?
+  summary    String
+  details    Json?
+  userId     Int?
+  username   String?
+  userName   String?
+  role       String?
+  studentId  Int?
+  classId    String?
+  ipAddress  String?
+  deviceId   String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([category])
+  @@index([userId])
+  @@index([studentId])
+  @@index([classId])
 }

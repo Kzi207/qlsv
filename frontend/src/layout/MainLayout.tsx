@@ -1,9 +1,35 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { Menu, Home, CalendarCheck, Award, User, LogOut } from 'lucide-react';
+import { Menu, Home, CalendarCheck, Award, User, LogOut, MessageCircle, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { motion } from 'framer-motion';
+const StudentChatbot = lazy(() => import('../components/StudentChatbot'));
+
+const ChatbotEntry = () => {
+  const [enabled, setEnabled] = useState(false);
+
+  if (enabled) {
+    return (
+      <Suspense fallback={null}>
+        <StudentChatbot initiallyOpen />
+      </Suspense>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEnabled(true)}
+      className="fixed bottom-24 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-2xl shadow-slate-900/25 transition hover:-translate-y-0.5 hover:bg-blue-600 active:scale-95 lg:bottom-6 lg:right-6"
+      title="Mở chatbot"
+    >
+      <MessageCircle size={24} />
+      <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-blue-600">
+        <Sparkles size={12} />
+      </span>
+    </button>
+  );
+};
 
 const BottomNav = () => {
   const location = useLocation();
@@ -30,7 +56,7 @@ const BottomNav = () => {
             <Link
               key={path}
               to={path}
-              className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl transition-all duration-200 ${
+              className={`relative flex flex-1 min-w-0 flex-col items-center gap-0.5 px-1 py-2 rounded-2xl transition-all duration-200 ${
                 active
                   ? 'text-blue-600'
                   : 'text-slate-400 hover:text-slate-700 active:scale-90'
@@ -43,26 +69,21 @@ const BottomNav = () => {
                   className={active ? 'text-blue-600' : ''}
                 />
               </div>
-              <span className={`text-[10px] font-bold ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+              <span className={`whitespace-nowrap text-[10px] font-bold leading-none ${active ? 'text-blue-600' : 'text-slate-400'}`}>
                 {label}
               </span>
-              {active && (
-                <motion.div
-                  layoutId="bottomNavIndicator"
-                  className="absolute -top-0.5 w-8 h-0.5 bg-blue-600 rounded-full"
-                />
-              )}
+              {active && <div className="absolute -top-0.5 h-0.5 w-8 rounded-full bg-blue-600" />}
             </Link>
           );
         })}
         <button
           onClick={handleLogout}
-          className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl text-slate-400 hover:text-rose-500 active:scale-90 transition-all duration-200"
+          className="flex flex-1 min-w-0 flex-col items-center gap-0.5 px-1 py-2 rounded-2xl text-slate-400 hover:text-rose-500 active:scale-90 transition-all duration-200"
         >
           <div className="p-1.5 rounded-xl">
             <LogOut size={22} strokeWidth={1.8} />
           </div>
-          <span className="text-[10px] font-bold">Đăng xuất</span>
+          <span className="whitespace-nowrap text-[10px] font-bold leading-none">Đăng xuất</span>
         </button>
       </div>
     </nav>
@@ -78,9 +99,10 @@ const MainLayout = () => {
     <div className="min-h-screen bg-[#f8fafc]">
       <Sidebar isOpen={isSidebarOpen} toggle={() => setSidebarOpen(!isSidebarOpen)} />
       
-      <div className="lg:ml-80 min-h-screen flex flex-col transition-all duration-500">
+      <div className={`${isSidebarOpen ? 'hidden lg:flex' : 'flex'} lg:ml-80 min-h-screen flex-col transition-all duration-500`}>
         {/* Mobile Header - Ultra Clean */}
-        <header className="lg:hidden bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-sm">
+        {!isSidebarOpen && (
+        <header className="lg:hidden bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 sticky top-0 z-[60] flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
             <button 
               onClick={() => setSidebarOpen(true)}
@@ -103,10 +125,8 @@ const MainLayout = () => {
             </Link>
           </div>
           
-          <div className="h-11 w-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center font-black text-blue-600 text-sm shadow-sm">
-            {user?.name?.[0]?.toUpperCase() || 'A'}
-          </div>
         </header>
+        )}
 
         <main className={`flex-1 p-3 md:p-8 ${isStudent ? 'pb-24 lg:pb-8' : ''}`}>
           <Outlet />
@@ -114,7 +134,8 @@ const MainLayout = () => {
       </div>
 
       {/* Global Bottom Nav for Students */}
-      {isStudent && <BottomNav />}
+      {isStudent && !isSidebarOpen && <BottomNav />}
+      {isStudent && <ChatbotEntry />}
     </div>
   );
 };

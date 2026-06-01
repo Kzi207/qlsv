@@ -15,6 +15,7 @@ import { toast } from 'react-hot-toast';
 import api from '../api/axios';
 import { EVALUATION_DATA } from '../constants/evaluationData';
 import {
+  getEvidenceUrl,
   type EvidenceFile,
   normalizeEvidenceList,
 } from '../utils/evidence';
@@ -630,7 +631,7 @@ const TrainingScoreDetail = () => {
       {reviewEvidence && (() => {
         const selectedCritMeta = EVALUATION_DATA.flatMap(s => s.criteria).find(c => c.id === reviewTargetCrit);
         const maxAllowedPoints = selectedCritMeta ? selectedCritMeta.maxPoints : 10;
-        const mainImage = reviewEvidence.item.files?.[0]?.path;
+        const mainEvidence = normalizeEvidenceList(reviewEvidence.item.files || [])[0];
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
@@ -650,12 +651,12 @@ const TrainingScoreDetail = () => {
               </div>
 
               <div className="mt-4 space-y-4">
-                {mainImage && (
+                {mainEvidence && (
                   <div>
                     <label className="block text-xs font-black uppercase tracking-wider text-slate-400 mb-1">Ảnh minh chứng</label>
                     <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
                       <img
-                        src={mainImage.startsWith('http') ? mainImage : `http://localhost:5000${mainImage.startsWith('/') ? '' : '/'}${mainImage}`}
+                        src={getEvidenceUrl(mainEvidence)}
                         alt="Minh chứng"
                         className="h-full w-full object-contain"
                       />
