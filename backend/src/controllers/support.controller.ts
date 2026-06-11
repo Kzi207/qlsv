@@ -71,6 +71,8 @@ export const createSupportRequestPublic = async (req: Request, res: Response) =>
 export const getSupportRequests = async (req: Request, res: Response) => {
   const rawStatus = String(req.query?.status || '').trim().toUpperCase();
   const status = ALLOWED_STATUSES.has(rawStatus) ? rawStatus : '';
+  const rawLimit = Number(req.query?.limit);
+  const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(100, rawLimit)) : 100;
 
   try {
     const repo = supportRequestRepo();
@@ -80,8 +82,19 @@ export const getSupportRequests = async (req: Request, res: Response) => {
 
     const items = await repo.findMany({
       where: status ? { status } : {},
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        subject: true,
+        message: true,
+        status: true,
+        sourcePage: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
-      take: 500,
+      take: limit,
     });
 
     return res.json(items);
@@ -121,3 +134,36 @@ export const updateSupportRequestStatus = async (req: Request, res: Response) =>
   }
 };
 
+export const deleteSupportRequest = async (req: Request, res: Response) => {
+  const id = Number(req.params?.id);
+
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.status(400).json({ message: 'Invalid request id' });
+  }
+
+  try {
+    const repo = supportRequestRepo();
+    if (!repo?.findUnique || !repo?.delete) {
+      return res.status(503).json({ message: 'Support service is not ready' });
+    }
+
+    const existing = await repo.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Support request not found' });
+    }
+
+    if (existing.status !== 'RESOLVED') {
+      return res.status(400).json({ message: 'Chi duoc xoa yeu cau da hoan tat' });
+    }
+
+    await repo.delete({ where: { id } });
+    return res.json({ message: 'Da xoa yeu cau ho tro' });
+  } catch (error) {
+    console.error('Delete support request error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};

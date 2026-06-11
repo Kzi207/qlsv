@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createSupportRequestPublic,
+  deleteSupportRequest,
   getSupportRequests,
   updateSupportRequestStatus,
 } from '../controllers/support.controller.js';
@@ -22,6 +23,6 @@ router.use(roleMiddleware(['ADMIN']));
 
 router.get('/', getSupportRequests);
 router.patch('/:id/status', updateSupportRequestStatus);
+router.delete('/:id', deleteSupportRequest);
 
 export default router;
-

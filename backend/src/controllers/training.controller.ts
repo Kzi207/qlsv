@@ -358,7 +358,108 @@ export const getSubmissionStatus = async (req: Request, res: Response) => {
   }
 };
 
-export const getTrainingScores = async (req: AuthRequest, res: Response) => {
+const TRAINING_REVIEW_STATUSES = new Set(['PENDING', 'APPROVED', 'REJECTED']);
+
+const buildTrainingScoreRoster = async (
+  req: AuthRequest,
+  options: {
+    classId?: string;
+    semesterName?: string;
+    status?: string;
+    assignedOnly?: unknown;
+  },
+) => {
+  const role = String(req.user?.role || '').toUpperCase();
+  const rawStatus = String(options.status || '').trim().toUpperCase();
+  const semesterName = normalizeSemesterName(options.semesterName);
+  const requestedClassId = String(options.classId || '').trim().toUpperCase();
+  const effectiveClassId =
+    role === 'BCH' ? String(req.user?.class_id || '').trim().toUpperCase() : requestedClassId;
+
+  const studentWhere: Record<string, any> = {};
+  if (effectiveClassId) {
+    studentWhere.class_id = effectiveClassId;
+  }
+
+  if (role === 'BCH' && String(options.assignedOnly) === 'true') {
+    const assignments = await (prisma as any).bchAssignment.findMany({
+      where: { bchUserId: Number(req.user?.id || 0) },
+    });
+
+    if (assignments.length > 0) {
+      studentWhere.OR = assignments.map((assignment: any) => ({
+        order_number: {
+          gte: assignment.fromOrder,
+          lte: assignment.toOrder,
+        },
+      }));
+    }
+  }
+
+  const scoreWhere: Record<string, any> = {};
+  if (semesterName) {
+    scoreWhere.semester_id = semesterName;
+  }
+  if (Object.keys(studentWhere).length > 0) {
+    scoreWhere.student = studentWhere;
+  }
+  if (TRAINING_REVIEW_STATUSES.has(rawStatus)) {
+    scoreWhere.status = rawStatus;
+  }
+
+  const [students, scores] = await Promise.all([
+    prisma.student.findMany({
+      where: studentWhere,
+      orderBy: [{ class_id: 'asc' }, { order_number: 'asc' }, { student_code: 'asc' }],
+    }),
+    (prisma.trainingScore as any).findMany({
+      where: scoreWhere,
+      include: {
+        student: true,
+        semester: true,
+      },
+      orderBy: [{ student: { class_id: 'asc' } }, { student: { order_number: 'asc' } }, { student: { student_code: 'asc' } }],
+    }),
+  ]);
+
+  const scoreByStudentId = new Map<number, any>();
+  scores.forEach((score: any) => {
+    const studentId = Number(score.student_id);
+    const existing = scoreByStudentId.get(studentId);
+
+    if (!existing) {
+      scoreByStudentId.set(studentId, score);
+      return;
+    }
+
+    const existingUpdatedAt = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+    const nextUpdatedAt = score.updatedAt ? new Date(score.updatedAt).getTime() : 0;
+    if (nextUpdatedAt >= existingUpdatedAt) {
+      scoreByStudentId.set(studentId, score);
+    }
+  });
+
+  const rows = students
+    .map((student) => ({
+      student,
+      score: scoreByStudentId.get(Number(student.id)) || null,
+    }))
+    .filter(({ score }) => {
+      if (rawStatus === 'SUBMITTED') return Boolean(score);
+      if (rawStatus === 'NOT_SUBMITTED') return !score;
+      if (TRAINING_REVIEW_STATUSES.has(rawStatus)) return Boolean(score);
+      return true;
+    });
+
+  return {
+    rows,
+    semesterName,
+    effectiveClassId,
+    rawStatus,
+  };
+};
+
+const getTrainingScoresLegacy = async (req: AuthRequest, res: Response) => {
   const { status, class_id, semester, assigned_only } = req.query;
 
   try {
@@ -406,6 +507,51 @@ export const getTrainingScores = async (req: AuthRequest, res: Response) => {
       },
     });
     res.json(scores);
+  } catch (error) {
+    console.error('Error in getTrainingScores:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getTrainingScores = async (req: AuthRequest, res: Response) => {
+  const { status, class_id, semester, assigned_only } = req.query;
+
+  try {
+    const { rows, semesterName } = await buildTrainingScoreRoster(req, {
+      classId: String(class_id || ''),
+      semesterName: String(semester || ''),
+      status: String(status || ''),
+      assignedOnly: assigned_only,
+    });
+
+    const payload = rows.map(({ student, score }) => {
+      if (score) {
+        return {
+          ...score,
+          student,
+        };
+      }
+
+      return {
+        id: `student-${student.id}`,
+        student_id: student.id,
+        y_thuc: 0,
+        hoat_dong: 0,
+        ky_luat: 0,
+        total: 0,
+        admin_hoat_dong: null,
+        admin_ky_luat: null,
+        admin_notes: null,
+        admin_total: null,
+        admin_y_thuc: null,
+        semester_id: semesterName || null,
+        semester: semesterName ? { name: semesterName } : null,
+        status: 'NOT_SUBMITTED',
+        student,
+      };
+    });
+
+    res.json(payload);
   } catch (error) {
     console.error('Error in getTrainingScores:', error);
     res.status(500).json({ message: 'Server error' });
@@ -590,8 +736,9 @@ export const approveTrainingScore = async (req: AuthRequest, res: Response) => {
 };
 
 
-export const exportTrainingScoresExcel = async (req: Request, res: Response) => {
-  const { class_id, semester } = req.query;
+const exportTrainingScoresExcelLegacy = async (req: Request, res: Response) => {
+  const classId = String(req.query.class_id || '').trim().toUpperCase();
+  const semesterName = normalizeSemesterName(req.query.semester);
 
   try {
     const ExcelJS = await getExcelJS();
@@ -612,6 +759,7 @@ export const exportTrainingScoresExcel = async (req: Request, res: Response) => 
       { header: 'Ý thức HT (Admin)', key: 'ad_yt', width: 18 },
       { header: 'Hoạt động (Admin)', key: 'ad_hd', width: 18 },
       { header: 'Kỷ luật (Admin)', key: 'ad_kl', width: 16 },
+      { header: 'Người chấm', key: 'grader', width: 24 },
       { header: 'Trạng thái', key: 'status', width: 14 },
     ];
 
@@ -619,37 +767,340 @@ export const exportTrainingScoresExcel = async (req: Request, res: Response) => 
     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
 
-    const scores = await (prisma.trainingScore as any).findMany({
-      where: {
-        semester_id: semester ? String(semester) : undefined,
-        student: class_id ? { class_id: String(class_id) } : undefined,
-      },
-      include: { student: true, semester: true },
-      orderBy: [{ student: { class_id: 'asc' } }, { student: { student_code: 'asc' } }]
+    const studentWhere = classId ? { class_id: classId } : undefined;
+    const scoreWhere: Record<string, any> = {};
+    if (semesterName) scoreWhere.semester_id = semesterName;
+    if (classId) scoreWhere.student = { class_id: classId };
+
+    const [students, scores] = await Promise.all([
+      prisma.student.findMany({
+        where: studentWhere,
+        orderBy: [{ class_id: 'asc' }, { order_number: 'asc' }, { student_code: 'asc' }],
+      }),
+      (prisma.trainingScore as any).findMany({
+        where: scoreWhere,
+        include: { student: true, semester: true },
+        orderBy: [{ student: { class_id: 'asc' } }, { student: { order_number: 'asc' } }, { student: { student_code: 'asc' } }]
+      }),
+    ]);
+
+    const scoreByStudentId = new Map<number, any>();
+    scores.forEach((score: any) => {
+      const studentId = Number(score.student_id);
+      const existing = scoreByStudentId.get(studentId);
+
+      if (!existing) {
+        scoreByStudentId.set(studentId, score);
+        return;
+      }
+
+      const existingUpdatedAt = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+      const nextUpdatedAt = score.updatedAt ? new Date(score.updatedAt).getTime() : 0;
+      if (nextUpdatedAt >= existingUpdatedAt) {
+        scoreByStudentId.set(studentId, score);
+      }
     });
 
-    for (const s of scores) {
+    const scoreIds = scores.map((score: any) => String(score.id));
+    const approvalLogs = scoreIds.length
+      ? await (prisma as any).activityLog.findMany({
+          where: {
+            action: 'TRAINING_APPROVAL_UPDATE',
+            targetId: { in: scoreIds },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+
+    const graderByScoreId = new Map<string, string>();
+    approvalLogs.forEach((log: any) => {
+      const targetId = String(log.targetId || '').trim();
+      if (!targetId || graderByScoreId.has(targetId)) return;
+      graderByScoreId.set(targetId, String(log.userName || log.username || '').trim() || 'N/A');
+    });
+
+    const rows = classId ? students : scores.map((score: any) => score.student).filter(Boolean);
+    const seenStudentIds = new Set<number>();
+
+    for (const student of rows) {
+      const studentId = Number(student.id);
+      if (!studentId || seenStudentIds.has(studentId)) continue;
+      seenStudentIds.add(studentId);
+
+      const s = scoreByStudentId.get(studentId);
+      const hasBeenGraded = s && s.admin_total !== null && s.admin_total !== undefined;
       sheet.addRow({
-        code: s.student.student_code,
-        name: s.student.name,
-        class: s.student.class_id,
-        semester: s.semester_id,
-        sv_total: s.total,
-        sv_yt: s.y_thuc,
-        sv_hd: s.hoat_dong,
-        sv_kl: s.ky_luat,
-        ad_total: s.admin_total ?? '',
-        ad_yt: s.admin_y_thuc ?? '',
-        ad_hd: s.admin_hoat_dong ?? '',
-        ad_kl: s.admin_ky_luat ?? '',
-        status: s.status,
+        code: student.student_code,
+        name: student.name,
+        class: student.class_id,
+        semester: s?.semester_id || semesterName || '',
+        sv_total: s?.total ?? '',
+        sv_yt: s?.y_thuc ?? '',
+        sv_hd: s?.hoat_dong ?? '',
+        sv_kl: s?.ky_luat ?? '',
+        ad_total: hasBeenGraded ? s.admin_total : '0dd',
+        ad_yt: hasBeenGraded ? (s.admin_y_thuc ?? 0) : '0dd',
+        ad_hd: hasBeenGraded ? (s.admin_hoat_dong ?? 0) : '0dd',
+        ad_kl: hasBeenGraded ? (s.admin_ky_luat ?? 0) : '0dd',
+        grader: hasBeenGraded ? (graderByScoreId.get(String(s.id)) || '') : '',
+        status: s?.status || 'NOT_GRADED',
       });
     }
 
-    await sendWorkbookAsXlsx(res, workbook, 'diem-ren-luyen.xlsx');
+    await sendWorkbookAsXlsx(res, workbook, `diem-ren-luyen-${classId || 'tat-ca'}.xlsx`);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Export failed' });
+  }
+};
+
+export const exportTrainingScoresExcel = async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  const classId = String(req.query.class_id || '').trim().toUpperCase();
+  const semesterName = normalizeSemesterName(req.query.semester);
+  const status = String(req.query.status || '').trim().toUpperCase();
+
+  try {
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Điểm Rèn Luyện');
+
+    sheet.columns = [
+      { header: 'MSSV', key: 'code', width: 16 },
+      { header: 'Họ tên', key: 'name', width: 30 },
+      { header: 'Lớp', key: 'class', width: 14 },
+      { header: 'Học kỳ', key: 'semester', width: 16 },
+      { header: 'Tự chấm (SV)', key: 'sv_total', width: 14 },
+      { header: 'Điểm', key: 'score', width: 12 },
+      { header: 'Người chấm', key: 'grader', width: 24 },
+    ];
+
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+
+    const { rows } = await buildTrainingScoreRoster(authReq, {
+      classId,
+      semesterName,
+      status,
+      assignedOnly: req.query.assigned_only,
+    });
+
+    const scoreIds = rows
+      .map((row) => row.score?.id)
+      .filter((value) => value !== null && value !== undefined)
+      .map((value) => String(value));
+
+    const approvalLogs = scoreIds.length
+      ? await (prisma as any).activityLog.findMany({
+          where: {
+            action: 'TRAINING_APPROVAL_UPDATE',
+            targetId: { in: scoreIds },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+
+    const graderByScoreId = new Map<string, string>();
+    approvalLogs.forEach((log: any) => {
+      const targetId = String(log.targetId || '').trim();
+      if (!targetId || graderByScoreId.has(targetId)) return;
+      graderByScoreId.set(targetId, String(log.userName || log.username || '').trim() || 'N/A');
+    });
+
+    rows.forEach(({ student, score }) => {
+      const hasBeenGraded = score && score.admin_total !== null && score.admin_total !== undefined;
+
+      sheet.addRow({
+        code: student.student_code,
+        name: student.name,
+        class: student.class_id,
+        semester: score?.semester_id || semesterName || '',
+        sv_total: score ? score.total : '0dd',
+        score: hasBeenGraded ? score.admin_total : '0dd',
+        grader: hasBeenGraded ? (graderByScoreId.get(String(score.id)) || '') : '',
+      });
+    });
+
+    await sendWorkbookAsXlsx(res, workbook, `diem-ren-luyen-${classId || 'tat-ca'}.xlsx`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Export failed' });
+  }
+};
+
+export const getTrainingStatistics = async (req: AuthRequest, res: Response) => {
+  const semesterName = normalizeSemesterName(req.query.semester);
+
+  if (!semesterName) {
+    return res.status(400).json({ message: 'Thieu hoc ky' });
+  }
+
+  try {
+    const role = String(req.user?.role || '').toUpperCase();
+    const requestedClassId = String(req.query.class_id || '').trim().toUpperCase();
+    const effectiveClassId =
+      role === 'BCH' ? String(req.user?.class_id || '').trim().toUpperCase() : requestedClassId;
+
+    const studentWhere = effectiveClassId ? { class_id: effectiveClassId } : {};
+    const scoreWhere: Record<string, any> = { semester_id: semesterName };
+    if (effectiveClassId) {
+      scoreWhere.student = { class_id: effectiveClassId };
+    }
+
+    const [students, scores] = await Promise.all([
+      prisma.student.findMany({
+        where: studentWhere,
+        select: {
+          id: true,
+          name: true,
+          student_code: true,
+          email: true,
+          class_id: true,
+          order_number: true,
+        },
+        orderBy: [{ class_id: 'asc' }, { order_number: 'asc' }, { student_code: 'asc' }],
+      }),
+      (prisma.trainingScore as any).findMany({
+        where: scoreWhere,
+        select: {
+          id: true,
+          student_id: true,
+          semester_id: true,
+          status: true,
+          total: true,
+          admin_total: true,
+          updatedAt: true,
+          student: {
+            select: {
+              id: true,
+              name: true,
+              student_code: true,
+              email: true,
+              class_id: true,
+              order_number: true,
+            },
+          },
+        },
+        orderBy: [{ student: { class_id: 'asc' } }, { student: { order_number: 'asc' } }, { student: { student_code: 'asc' } }],
+      }),
+    ]);
+
+    const scoreByStudentId = new Map<number, any>();
+    scores.forEach((score: any) => {
+      scoreByStudentId.set(Number(score.student_id), score);
+    });
+
+    const classMap = new Map<string, any>();
+    const ensureClassSummary = (classId: string) => {
+      const normalizedClassId = String(classId || '').trim().toUpperCase() || 'CHUA_PHAN_LOP';
+      if (!classMap.has(normalizedClassId)) {
+        classMap.set(normalizedClassId, {
+          classId: normalizedClassId,
+          totalStudents: 0,
+          submittedCount: 0,
+          approvedCount: 0,
+          pendingCount: 0,
+          rejectedCount: 0,
+          notSubmittedCount: 0,
+          submittedStudents: [],
+          approvedStudents: [],
+          notSubmittedStudents: [],
+          pendingStudents: [],
+          rejectedStudents: [],
+        });
+      }
+      return classMap.get(normalizedClassId);
+    };
+
+    students.forEach((student) => {
+      const classSummary = ensureClassSummary(student.class_id);
+      const score = scoreByStudentId.get(student.id);
+      const studentInfo = {
+        id: student.id,
+        name: student.name,
+        studentCode: student.student_code,
+        email: student.email,
+        classId: student.class_id,
+        orderNumber: student.order_number,
+      };
+
+      classSummary.totalStudents += 1;
+
+      if (!score) {
+        classSummary.notSubmittedCount += 1;
+        classSummary.notSubmittedStudents.push(studentInfo);
+        return;
+      }
+
+      const status = String(score.status || 'PENDING').toUpperCase();
+      const scoredStudent = {
+        ...studentInfo,
+        scoreId: score.id,
+        status,
+        selfTotal: score.total,
+        approvedTotal: score.admin_total,
+        updatedAt: score.updatedAt,
+      };
+
+      classSummary.submittedCount += 1;
+      classSummary.submittedStudents.push(scoredStudent);
+
+      if (status === 'APPROVED') {
+        classSummary.approvedCount += 1;
+        classSummary.approvedStudents.push(scoredStudent);
+      } else if (status === 'REJECTED') {
+        classSummary.rejectedCount += 1;
+        classSummary.rejectedStudents.push(scoredStudent);
+      } else {
+        classSummary.pendingCount += 1;
+        classSummary.pendingStudents.push(scoredStudent);
+      }
+    });
+
+    const classSummaries = Array.from(classMap.values())
+      .map((item) => ({
+        ...item,
+        submissionRate: item.totalStudents > 0 ? Math.round((item.submittedCount / item.totalStudents) * 100) : 0,
+        approvalRate: item.submittedCount > 0 ? Math.round((item.approvedCount / item.submittedCount) * 100) : 0,
+      }))
+      .sort((a, b) => a.classId.localeCompare(b.classId));
+
+    const totals = classSummaries.reduce(
+      (acc, item) => {
+        acc.totalStudents += item.totalStudents;
+        acc.submittedCount += item.submittedCount;
+        acc.approvedCount += item.approvedCount;
+        acc.pendingCount += item.pendingCount;
+        acc.rejectedCount += item.rejectedCount;
+        acc.notSubmittedCount += item.notSubmittedCount;
+        return acc;
+      },
+      {
+        totalStudents: 0,
+        submittedCount: 0,
+        approvedCount: 0,
+        pendingCount: 0,
+        rejectedCount: 0,
+        notSubmittedCount: 0,
+      },
+    );
+
+    return res.json({
+      semester: semesterName,
+      classFilter: effectiveClassId || null,
+      generatedAt: new Date().toISOString(),
+      totals: {
+        ...totals,
+        submissionRate:
+          totals.totalStudents > 0 ? Math.round((totals.submittedCount / totals.totalStudents) * 100) : 0,
+        approvalRate:
+          totals.submittedCount > 0 ? Math.round((totals.approvedCount / totals.submittedCount) * 100) : 0,
+      },
+      classes: classSummaries,
+    });
+  } catch (error) {
+    console.error('Error in getTrainingStatistics:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 

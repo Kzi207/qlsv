@@ -1,13 +1,25 @@
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { createHash, randomInt } from 'crypto';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma.js';
 import type { AuthRequest } from '../types/index.js';
 import { clearAuthCookies, createCsrfToken, setAuthCookies, setCsrfCookie, getCookieValue, CSRF_COOKIE_NAME } from '../utils/security.js';
 import { getJwtSecret } from '../utils/env.js';
 import { writeActivityLog } from '../utils/activity-log.js';
+import { sendPasswordResetCodeEmail } from '../utils/auth-email.js';
 
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('invalid-password-for-timing-defense', 10);
+const PASSWORD_RESET_EXPIRES_MINUTES = 10;
+const INVALID_LOGIN_MESSAGE = 'Tài khoản hoặc mật khẩu bạn nhập chưa đúng';
+
+type PasswordResetTokenPayload = {
+  purpose: 'PASSWORD_RESET';
+  userId: number;
+  username: string;
+  code: string;
+  pwdv: string;
+};
 
 const applyNoStoreHeaders = (res: Response) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -31,10 +43,14 @@ const toSafeUser = (user: any) => ({
   username: user.username,
   name: user.name,
   email: user.email,
+  phone: user.phone,
   role: String(user.role || '').toUpperCase(),
   studentId: user.studentId,
   class_id: user.class_id,
 });
+
+const getPasswordHashFingerprint = (passwordHash: string) =>
+  createHash('sha256').update(String(passwordHash || '')).digest('hex');
 
 export const login = async (req: Request, res: Response) => {
   const username = String(req.body?.username || '').trim();
@@ -55,6 +71,7 @@ export const login = async (req: Request, res: Response) => {
         password: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         studentId: true,
         class_id: true,
@@ -70,7 +87,7 @@ export const login = async (req: Request, res: Response) => {
         details: { username },
         username,
       });
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: INVALID_LOGIN_MESSAGE });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -89,7 +106,7 @@ export const login = async (req: Request, res: Response) => {
         studentId: user.studentId,
         classId: user.class_id,
       });
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: INVALID_LOGIN_MESSAGE });
     }
 
     const token = jwt.sign(
@@ -147,6 +164,7 @@ export const me = async (req: AuthRequest, res: Response) => {
         username: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         studentId: true,
         class_id: true,
@@ -185,28 +203,94 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
+  const username = String(req.body?.username || '').trim();
   const name = String(req.body?.name || '').trim();
   const emailValue = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+  const phoneValue = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
 
+  if (!username) {
+    return res.status(400).json({ message: 'Username is required' });
+  }
   if (!name) {
     return res.status(400).json({ message: 'Name is required' });
   }
 
   try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: Number(req.user.id) },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        studentId: true,
+        class_id: true,
+      },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const duplicateUsername = await prisma.user.findFirst({
+      where: {
+        username,
+        NOT: { id: currentUser.id },
+      },
+      select: { id: true },
+    });
+
+    if (duplicateUsername) {
+      return res.status(409).json({ message: 'Username already exists' });
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: Number(req.user.id) },
       data: {
+        username,
         name,
         email: emailValue || null,
+        phone: phoneValue || null,
       },
     });
+
+    const csrfToken = getCookieValue(req, CSRF_COOKIE_NAME) || createCsrfToken();
+    const accessToken = jwt.sign(
+      {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        role: updatedUser.role,
+        studentId: updatedUser.studentId,
+        class_id: updatedUser.class_id,
+      },
+      getJwtSecret(),
+      { expiresIn: '24h' }
+    );
+    setAuthCookies(req, res, accessToken, csrfToken);
+
     await writeActivityLog(req, {
       action: 'PROFILE_UPDATE',
       category: 'AUTH',
       targetType: 'User',
       targetId: updatedUser.id,
       summary: `${updatedUser.name || updatedUser.username} cap nhat ho so ca nhan`,
-      details: { name: updatedUser.name, email: updatedUser.email },
+      details: {
+        before: {
+          username: currentUser.username,
+          name: currentUser.name,
+          email: currentUser.email,
+          phone: currentUser.phone,
+        },
+        after: {
+          username: updatedUser.username,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+        },
+      },
+      username: updatedUser.username,
       userName: updatedUser.name,
       studentId: updatedUser.studentId,
       classId: updatedUser.class_id,
@@ -271,5 +355,160 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Change password error:', error);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const requestPasswordResetCode = async (req: Request, res: Response) => {
+  const username = String(req.body?.username || '').trim();
+
+  if (!username) {
+    return res.status(400).json({ message: 'Vui lòng nhập mã sinh viên hoặc tên đăng nhập.' });
+  }
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: username,
+          mode: 'insensitive',
+        },
+      },
+      select: {
+        id: true,
+        username: true,
+        password: true,
+        name: true,
+        email: true,
+        role: true,
+        studentId: true,
+        class_id: true,
+        student: {
+          select: {
+            student_code: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản sinh viên.' });
+    }
+
+    const targetEmail = String(user.email || user.student?.email || '').trim();
+    if (!targetEmail) {
+      return res.status(400).json({ message: 'Tài khoản này chưa có email sinh viên để nhận mã.' });
+    }
+
+    const resetCode = String(randomInt(100000, 1000000));
+    const resetToken = jwt.sign(
+      {
+        purpose: 'PASSWORD_RESET',
+        userId: user.id,
+        username: user.username,
+        code: resetCode,
+        pwdv: getPasswordHashFingerprint(user.password),
+      } satisfies PasswordResetTokenPayload,
+      getJwtSecret(),
+      { expiresIn: `${PASSWORD_RESET_EXPIRES_MINUTES}m` },
+    );
+
+    const mailResult = await sendPasswordResetCodeEmail({
+      to: targetEmail,
+      studentName: user.student?.name || user.name || user.username,
+      studentCode: user.student?.student_code || user.username,
+      code: resetCode,
+      expiresInMinutes: PASSWORD_RESET_EXPIRES_MINUTES,
+    });
+
+    if (!mailResult.sent) {
+      return res.status(500).json({ message: mailResult.message });
+    }
+
+    return res.json({
+      message: mailResult.message,
+      resetToken,
+    });
+  } catch (error) {
+    console.error('Request password reset code error:', error);
+    return res.status(500).json({ message: resolveInternalErrorMessage(error) });
+  }
+};
+
+export const confirmPasswordReset = async (req: Request, res: Response) => {
+  const resetToken = String(req.body?.resetToken || '').trim();
+  const code = String(req.body?.code || '').trim();
+  const newPassword = String(req.body?.newPassword || '');
+
+  if (!resetToken || !code || !newPassword) {
+    return res.status(400).json({ message: 'Thiếu mã xác thực hoặc mật khẩu mới.' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ message: 'Mật khẩu mới phải có ít nhất 8 ký tự.' });
+  }
+
+  try {
+    const decoded = jwt.verify(resetToken, getJwtSecret());
+    if (!decoded || typeof decoded === 'string') {
+      return res.status(400).json({ message: 'Mã xác thực không hợp lệ.' });
+    }
+
+    const payload = decoded as PasswordResetTokenPayload;
+    if (payload.purpose !== 'PASSWORD_RESET') {
+      return res.status(400).json({ message: 'Mã xác thực không hợp lệ.' });
+    }
+
+    if (payload.code !== code) {
+      return res.status(400).json({ message: 'Mã xác thực không đúng.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: Number(payload.userId) },
+      select: {
+        id: true,
+        username: true,
+        password: true,
+        name: true,
+        role: true,
+        studentId: true,
+        class_id: true,
+      },
+    });
+
+    if (!user || getPasswordHashFingerprint(user.password) !== payload.pwdv) {
+      return res.status(400).json({ message: 'Mã xác thực đã hết hiệu lực. Vui lòng yêu cầu mã mới.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    await writeActivityLog(req, {
+      action: 'PASSWORD_RESET',
+      category: 'AUTH',
+      targetType: 'User',
+      targetId: user.id,
+      summary: `${user.name || user.username} dat lai mat khau bang ma xac thuc`,
+      details: { username: user.username },
+      userId: user.id,
+      username: user.username,
+      userName: user.name,
+      role: user.role,
+      studentId: user.studentId,
+      classId: user.class_id,
+    });
+
+    return res.json({ message: 'Đổi mật khẩu thành công. Bạn có thể đăng nhập lại.' });
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(400).json({ message: 'Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.' });
+    }
+
+    console.error('Confirm password reset error:', error);
+    return res.status(500).json({ message: resolveInternalErrorMessage(error) });
   }
 };

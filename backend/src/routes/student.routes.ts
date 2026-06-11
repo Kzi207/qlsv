@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStudents, createStudent, updateStudent, deleteStudent, createStudentAccount, deleteStudentAccount, importStudentsExcel, getStudentTemplate, deleteClassStudents, exportStudentAccounts, getStudentStats, getDashboardStats } from '../controllers/student.controller.js';
+import { getStudents, createStudent, updateStudent, deleteStudent, createStudentAccount, deleteStudentAccount, importStudentsExcel, previewImportStudentsExcel, getStudentTemplate, deleteClassStudents, exportStudentAccounts, getStudentStats, getDashboardStats } from '../controllers/student.controller.js';
 import { authMiddleware, roleMiddleware } from '../middleware/auth.middleware.js';
 import multer from 'multer';
 import path from 'path';
@@ -46,6 +46,7 @@ router.get('/', adminBchOnly, getStudents);
 router.get('/template', adminBchOnly, getStudentTemplate);
 router.get('/export-accounts', adminBchOnly, exportStudentAccounts);
 router.post('/', adminBchOnly, createStudent);
+router.post('/import/preview', adminBchOnly, upload.single('file'), previewImportStudentsExcel);
 router.post('/import', adminBchOnly, upload.single('file'), importStudentsExcel);
 router.put('/:id', adminBchOnly, updateStudent);
 router.delete('/:id', adminBchOnly, deleteStudent);

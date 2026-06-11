@@ -1,82 +1,183 @@
-# QLSV - Hệ thống quản lý sinh viên
+# QLSV | Hệ Thống Quản Lý Sinh Viên
 
-![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20%20%3C25-339933?style=for-the-badge&logo=node.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111827)
-![Express](https://img.shields.io/badge/Express-5-000000?style=for-the-badge&logo=express&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
+<div align="center">
+  <img src="./frontend/public/logo-qlsv-clean.png" alt="QLSV Logo" width="160" />
 
-QLSV là ứng dụng web hỗ trợ quản lý sinh viên, lớp học, học kỳ, tài khoản, điểm rèn luyện, minh chứng, điểm danh QR, sự kiện và yêu cầu hỗ trợ. Dự án được xây dựng theo mô hình full-stack TypeScript với backend Express/Prisma và frontend React/Vite.
+  <h3>Nền tảng quản lý sinh viên, điểm rèn luyện, điểm danh QR và vận hành lớp học trên một hệ thống thống nhất</h3>
 
-Ứng dụng phù hợp cho môi trường quản lý lớp, khoa hoặc nhóm đào tạo cần một hệ thống gọn, dễ triển khai, có phân quyền rõ ràng giữa quản trị viên, ban cán sự và sinh viên.
+  <p>
+    <img src="https://img.shields.io/badge/Node.js-%3E%3D20%20%3C25-2F855A?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+    <img src="https://img.shields.io/badge/TypeScript-6.x-2563EB?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/React-19-0EA5E9?style=for-the-badge&logo=react&logoColor=06263A" alt="React" />
+    <img src="https://img.shields.io/badge/Express-5-111827?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+    <img src="https://img.shields.io/badge/Prisma-6-334155?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
+    <img src="https://img.shields.io/badge/PostgreSQL-Ready-0F766E?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  </p>
+</div>
+
+> QLSV là dự án full-stack TypeScript phục vụ quản lý sinh viên theo lớp và học kỳ, kết hợp các bài toán thực tế như chấm điểm rèn luyện, nộp minh chứng, điểm danh QR có kiểm tra vị trí, đăng ký sự kiện, yêu cầu hỗ trợ và chatbot nội bộ cho sinh viên.
 
 ## Mục Lục
 
-- [Điểm nổi bật](#điểm-nổi-bật)
-- [Vai trò người dùng](#vai-trò-người-dùng)
-- [Kiến trúc tổng quan](#kiến-trúc-tổng-quan)
-- [Công nghệ sử dụng](#công-nghệ-sử-dụng)
-- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-- [Yêu cầu cài đặt](#yêu-cầu-cài-đặt)
-- [Cài đặt nhanh](#cài-đặt-nhanh)
-- [Cấu hình môi trường](#cấu-hình-môi-trường)
-- [Khởi tạo database](#khởi-tạo-database)
-- [Chạy dự án](#chạy-dự-án)
-- [Các đường dẫn chính](#các-đường-dẫn-chính)
-- [API backend](#api-backend)
-- [Build production](#build-production)
-- [Gợi ý triển khai](#gợi-ý-triển-khai)
-- [Kiểm tra mã nguồn](#kiểm-tra-mã-nguồn)
-- [Lỗi thường gặp](#lỗi-thường-gặp)
-- [Bảo mật](#bảo-mật)
-- [Thông tin liên hệ](#thông-tin-liên-hệ)
+- [Tổng Quan Dự Án](#tổng-quan-dự-án)
+- [Điểm Nổi Bật](#điểm-nổi-bật)
+- [Phân Tích Tính Năng Theo Nghiệp Vụ](#phân-tích-tính-năng-theo-nghiệp-vụ)
+- [Vai Trò Người Dùng](#vai-trò-người-dùng)
+- [Kiến Trúc Tổng Quan](#kiến-trúc-tổng-quan)
+- [Công Nghệ Sử Dụng](#công-nghệ-sử-dụng)
+- [Cấu Trúc Thư Mục](#cấu-trúc-thư-mục)
+- [Hướng Dẫn Chạy Dự Án Từ Đầu](#hướng-dẫn-chạy-dự-án-từ-đầu)
+- [Biến Môi Trường Backend](#biến-môi-trường-backend)
+- [Biến Môi Trường Frontend](#biến-môi-trường-frontend)
+- [Khởi Tạo Database](#khởi-tạo-database)
+- [Chạy Local Development](#chạy-local-development)
+- [Luồng Kiểm Tra Sau Khi Chạy](#luồng-kiểm-tra-sau-khi-chạy)
+- [Route Và API Chính](#route-và-api-chính)
+- [Build Và Triển Khai](#build-và-triển-khai)
+- [Bảo Mật Và Vận Hành](#bảo-mật-và-vận-hành)
+- [Lỗi Thường Gặp](#lỗi-thường-gặp)
+- [Tác Giả](#tác-giả)
+- [Bản Quyền](#bản-quyền)
+
+## Tổng Quan Dự Án
+
+QLSV được thiết kế cho bối cảnh quản lý lớp, khoa hoặc đơn vị đào tạo cần một hệ thống gọn nhưng đủ sâu để xử lý cả nghiệp vụ học vụ lẫn vận hành hằng ngày. Thay vì tách rời nhiều biểu mẫu, file Excel và nhóm chat, dự án gom các luồng công việc quan trọng về cùng một nền tảng:
+
+- Quản trị tài khoản, sinh viên, lớp và học kỳ.
+- Theo dõi điểm rèn luyện theo từng học kỳ với khả năng tự đánh giá, phê duyệt và đối soát minh chứng.
+- Điểm danh QR theo lớp hoặc theo hoạt động, có kiểm tra vị trí, IP và lịch sử check-in.
+- Tổ chức sự kiện có trang đăng ký công khai riêng.
+- Tiếp nhận yêu cầu hỗ trợ từ sinh viên ngay cả khi chưa đăng nhập.
+- Tạo nhật ký hoạt động để truy vết thao tác.
+- Tích hợp chatbot nội bộ để hỗ trợ các câu hỏi thường gặp và một số truy vấn cá nhân.
+
+Điểm mạnh của dự án không chỉ nằm ở số lượng module, mà ở cách các module liên kết với nhau. Ví dụ, một phiên điểm danh hoạt động có thể cộng trực tiếp điểm vào tiêu chí rèn luyện phù hợp; minh chứng được duyệt sẽ làm thay đổi tổng điểm và đưa phiếu về trạng thái chờ xét lại; BCH có thể chỉ quản lý lớp hoặc dải số thứ tự sinh viên được phân công.
 
 ## Điểm Nổi Bật
 
-| Nhóm chức năng | Mô tả |
+| Nhóm | Giá trị thực tế |
 | --- | --- |
-| Xác thực và phân quyền | Đăng nhập bằng cookie HTTP-only, CSRF token, phân quyền `ADMIN`, `BCH`, `STUDENT`. |
-| Quản lý sinh viên | Quản lý danh sách sinh viên, mã số sinh viên, email, lớp và tài khoản liên kết. |
-| Quản lý lớp và học kỳ | Tạo lớp, gán học kỳ, chọn học kỳ đang hoạt động theo lớp. |
-| Điểm rèn luyện | Sinh viên tự đánh giá, nộp minh chứng, ban cán sự/quản trị viên xét duyệt và điều chỉnh. |
-| Điểm danh QR | Tạo phiên điểm danh theo lớp hoặc hoạt động, quét QR, kiểm tra vị trí, IP và thiết bị. |
-| Sự kiện | Quản lý sự kiện và trang đăng ký công khai tại `/dangky`. |
-| Ban cán sự | Gán BCH phụ trách theo lớp và khoảng số thứ tự sinh viên. |
-| Hỗ trợ sinh viên | Tiếp nhận yêu cầu hỗ trợ từ trang liên hệ công khai và quản lý trong dashboard. |
-| Nhật ký hoạt động | Ghi nhận lịch sử thao tác theo người dùng, vai trò, đối tượng và thời gian. |
-| Chatbot sinh viên | Hỗ trợ hỏi đáp về điểm danh, điểm rèn luyện, minh chứng, hồ sơ cá nhân. Có thể dùng Gemini khi cấu hình API key. |
-| Excel | Hỗ trợ các thao tác xuất/nhập dữ liệu liên quan đến sinh viên, điểm và thống kê. |
-| Lưu trữ minh chứng | Hỗ trợ upload file, xử lý ảnh và tùy chọn lưu trên Cloudflare R2. |
+| Quản lý theo vai trò | Phân quyền rõ giữa `ADMIN`, `BCH`, `STUDENT`, giúp đúng người đúng việc. |
+| Điểm rèn luyện có chiều sâu | Không chỉ lưu tổng điểm, mà còn lưu chi tiết theo tiêu chí, file minh chứng, hoạt động QR, trạng thái duyệt và ghi chú phản hồi. |
+| Điểm danh QR thông minh | Hỗ trợ phiên điểm danh theo lớp hoặc hoạt động, có tọa độ, bán kính, khung giờ và tổng hợp tỷ lệ tham gia. |
+| Gắn hoạt động vào DRL | Điểm danh hoạt động có thể tự cộng điểm vào đúng mục rèn luyện theo cấu hình phiên QR. |
+| Vận hành linh hoạt cho BCH | BCH có thể bị giới hạn theo lớp hoặc theo khoảng số thứ tự sinh viên. |
+| Hỗ trợ công khai | Sinh viên có thể gửi yêu cầu hỗ trợ từ trang công khai mà không cần đăng nhập. |
+| Chatbot nội bộ | Có thể trả lời về chuyên cần, điểm rèn luyện, hồ sơ cá nhân, đồng thời fallback sang tri thức cục bộ nếu chưa cấu hình AI. |
+| Khả năng mở rộng tốt | Prisma + TypeScript + React giúp dự án dễ bảo trì và phát triển thêm module. |
+
+## Phân Tích Tính Năng Theo Nghiệp Vụ
+
+### 1. Xác thực và hồ sơ người dùng
+
+- Đăng nhập bằng `username/password`, phát hành JWT và lưu phiên bằng cookie.
+- Có các luồng `me`, cập nhật hồ sơ, đổi mật khẩu, quên mật khẩu bằng mã gửi email.
+- Hệ thống có ghi log cho các thao tác auth quan trọng như đăng nhập thành công, đăng nhập thất bại, đổi mật khẩu, đặt lại mật khẩu.
+- Frontend dùng route guard để khóa màn hình theo vai trò.
+
+### 2. Quản lý sinh viên, lớp và học kỳ
+
+- Quản lý danh sách sinh viên với mã sinh viên, email, lớp, số thứ tự.
+- Quản lý lớp học và học kỳ đang hoạt động.
+- Học kỳ có thể mang tính toàn cục hoặc giới hạn theo phạm vi lớp.
+- Đây là phần nền cho hầu hết module còn lại: DRL, điểm danh, sự kiện và thống kê.
+
+### 3. Điểm rèn luyện
+
+- Sinh viên có thể tự nộp phiếu đánh giá theo học kỳ.
+- Hệ thống lưu chi tiết theo từng tiêu chí dưới dạng `details`, không chỉ lưu điểm tổng.
+- Có phân tách `điểm sinh viên tự khai` và `điểm quản trị/BCH duyệt`.
+- Mỗi phiếu có trạng thái như `PENDING`, `APPROVED`, `REJECTED`.
+- Có thống kê theo lớp, tỷ lệ nộp phiếu, tỷ lệ duyệt và danh sách chưa nộp.
+- Có thể export Excel để phục vụ tổng hợp và báo cáo.
+
+### 4. Minh chứng và xét duyệt minh chứng
+
+- Sinh viên nộp minh chứng riêng cho từng tiêu chí.
+- Mỗi minh chứng có tên hoạt động, số điểm, danh sách file, trạng thái và thời điểm nộp.
+- Khi minh chứng được duyệt, hệ thống có thể gắn điểm vào tiêu chí tương ứng và tự tính lại tổng điểm rèn luyện.
+- Nếu minh chứng bị từ chối hoặc chuyển tiêu chí, dữ liệu cũng được đồng bộ lại.
+- Phần này tạo ra quy trình duyệt minh bạch hơn thay vì chấm thủ công hoàn toàn.
+
+### 5. Điểm danh QR và chuyên cần
+
+- Tạo phiên điểm danh cho lớp hoặc cho hoạt động.
+- Mỗi phiên có `title`, `sessionDate`, tọa độ, bán kính, thời gian mở/đóng check-in và token QR riêng.
+- Có hỗ trợ kiểm tra khoảng cách địa lý, IP, thông tin thiết bị và hồ sơ check-in nền của sinh viên.
+- Có thống kê số lượng đã điểm danh, vắng mặt, tỷ lệ tham gia, mức độ hợp lệ vị trí/IP.
+- Có thể điểm danh thủ công hoặc xóa điểm danh thủ công khi cần hiệu chỉnh.
+- Có thể export danh sách điểm danh ra Excel.
+
+### 6. Cộng điểm hoạt động vào DRL
+
+- Đây là một phần khá hay của dự án: phiên điểm danh hoạt động có thể cấu hình để cộng điểm vào một mục DRL cụ thể.
+- Khi sinh viên check-in thành công, hệ thống ghi lại activity vào chi tiết tiêu chí, cộng điểm và cập nhật tổng phiếu.
+- Nếu admin xóa check-in thủ công, điểm cộng tương ứng cũng được rút lại.
+- Điều này giúp giảm khối lượng cộng điểm thủ công sau sự kiện.
+
+### 7. Sự kiện và trang đăng ký công khai
+
+- Có module quản lý sự kiện ở backend/frontend.
+- Có route công khai `/dangky` cho phép đăng ký tham gia sự kiện.
+- Dữ liệu đăng ký được lưu thành từng bản ghi và có ràng buộc tránh đăng ký trùng theo sinh viên/sự kiện.
+
+### 8. Ban cán sự và phạm vi phụ trách
+
+- BCH không chỉ là một vai trò hiển thị, mà có bảng phân công riêng.
+- Có thể gán BCH theo lớp và khoảng số thứ tự sinh viên từ `fromOrder` đến `toOrder`.
+- Điều này phù hợp với mô hình lớp đông sinh viên, nhiều BCH cùng phụ trách từng cụm.
+
+### 9. Yêu cầu hỗ trợ
+
+- Có endpoint công khai nhận yêu cầu hỗ trợ.
+- Admin có thể xem danh sách, cập nhật trạng thái `NEW`, `IN_PROGRESS`, `RESOLVED`, và chỉ xóa khi yêu cầu đã hoàn tất.
+- Hệ thống lưu thêm `sourcePage`, `ipAddress`, `userAgent` để hỗ trợ truy vết.
+
+### 10. Chatbot hỗ trợ sinh viên
+
+- Có tri thức cục bộ cho các chủ đề như điểm danh, DRL, hồ sơ, sự kiện, hỗ trợ.
+- Nếu cấu hình `GEMINI_API_KEY` hoặc `GOOGLE_GENAI_API_KEY`, chatbot có thể sinh câu trả lời bằng AI trên nền hướng dẫn nội bộ.
+- Có cơ chế từ chối các yêu cầu không an toàn như xin token, mật khẩu, bypass bảo mật hoặc sửa điểm trái phép.
+- Chatbot còn hỗ trợ các truy vấn cá nhân như:
+  - Xem thông tin cá nhân.
+  - Xem điểm rèn luyện gần nhất.
+  - Xem tổng quan chuyên cần.
+  - Cập nhật tên hoặc email của chính tài khoản hiện tại.
+
+### 11. Nhật ký hoạt động
+
+- Nhiều thao tác quan trọng đều gọi `writeActivityLog`.
+- Đây là nền tảng quan trọng cho audit, debug và truy vết thay đổi.
+- Dù route lịch sử trên UI hiện chưa mở ra đầy đủ như một module riêng, dữ liệu log ở backend đã có giá trị vận hành rõ ràng.
 
 ## Vai Trò Người Dùng
 
 | Vai trò | Quyền chính |
 | --- | --- |
-| `ADMIN` | Toàn quyền quản lý dashboard, sinh viên, lớp, học kỳ, tài khoản, BCH, sự kiện, hỗ trợ, điểm danh, điểm rèn luyện, minh chứng và nhật ký hoạt động. |
-| `BCH` | Hỗ trợ quản lý sinh viên/lớp được phân công, tạo hoặc kiểm tra điểm danh, xử lý điểm rèn luyện và minh chứng theo phạm vi phụ trách. |
-| `STUDENT` | Xem dashboard cá nhân, điểm danh QR, xem chuyên cần, tự đánh giá điểm rèn luyện, nộp minh chứng, xem hồ sơ và dùng chatbot. |
+| `ADMIN` | Toàn quyền với sinh viên, lớp, học kỳ, tài khoản, BCH, sự kiện, hỗ trợ, điểm rèn luyện, minh chứng, điểm danh và thống kê. |
+| `BCH` | Quản lý lớp/phạm vi được giao, hỗ trợ duyệt DRL, theo dõi sinh viên, tổ chức điểm danh và xử lý nghiệp vụ trong phạm vi phụ trách. |
+| `STUDENT` | Đăng nhập xem dashboard, điểm danh QR, theo dõi chuyên cần, nộp phiếu DRL, nộp minh chứng, xem hồ sơ và dùng chatbot. |
 
 ## Kiến Trúc Tổng Quan
 
 ```text
 Browser
   |
-  | React + Vite
   v
-Frontend
+React 19 + Vite + Router + Zustand + Axios
   |
-  | Axios, cookie, CSRF token
+  |  Cookie auth / API calls
   v
-Backend API
+Express 5 API
   |
-  | Prisma ORM
+  |  Prisma ORM
   v
 PostgreSQL
 
-Tùy chọn:
-Backend -> Cloudflare R2 cho minh chứng
-Backend -> Gmail SMTP cho email thông báo
-Backend -> Google GenAI/Gemini cho chatbot
+Tùy chọn mở rộng:
+- Cloudflare R2 cho file minh chứng
+- Gmail SMTP cho mail quên mật khẩu / thông báo
+- Google GenAI (Gemini) cho chatbot
 ```
 
 ## Công Nghệ Sử Dụng
@@ -85,35 +186,36 @@ Backend -> Google GenAI/Gemini cho chatbot
 
 | Công nghệ | Vai trò |
 | --- | --- |
-| Node.js `>=20 <25` | Runtime backend. |
-| Express 5 | Xây dựng REST API. |
-| TypeScript | Kiểu dữ liệu và build backend. |
-| Prisma 6 | ORM, migration, seed database. |
-| PostgreSQL | Cơ sở dữ liệu chính. |
-| JWT + Cookie | Xác thực phiên đăng nhập. |
-| CSRF middleware | Bảo vệ request thay đổi dữ liệu. |
-| Multer + Sharp | Upload và xử lý file/ảnh minh chứng. |
-| ExcelJS | Xử lý dữ liệu Excel. |
-| Nodemailer | Gửi email khi cấu hình Gmail SMTP. |
-| AWS S3 SDK | Kết nối Cloudflare R2 theo chuẩn S3. |
-| Google GenAI | Chatbot AI tùy chọn. |
+| Node.js `>=20 <25` | Runtime cho API server |
+| Express 5 | Tổ chức REST API |
+| TypeScript | Kiểu dữ liệu và maintainability |
+| Prisma 6 | ORM, migration, seed |
+| PostgreSQL | Cơ sở dữ liệu chính |
+| bcryptjs | Hash mật khẩu |
+| jsonwebtoken | Sinh JWT cho phiên đăng nhập |
+| cookie-parser | Xử lý cookie |
+| Multer + Sharp | Upload và xử lý ảnh/file minh chứng |
+| ExcelJS | Xuất dữ liệu Excel |
+| Nodemailer | Gửi email |
+| AWS S3 SDK | Kết nối Cloudflare R2 |
+| Google GenAI SDK | Tích hợp chatbot AI |
 
 ### Frontend
 
 | Công nghệ | Vai trò |
 | --- | --- |
-| React 19 | Xây dựng giao diện. |
-| TypeScript | Kiểu dữ liệu phía frontend. |
-| Vite | Dev server, proxy API và build production. |
-| React Router 7 | Điều hướng và bảo vệ route. |
-| Zustand | Lưu trạng thái xác thực. |
-| Tailwind CSS | Thiết kế giao diện. |
-| Axios | Gọi API backend. |
-| Recharts | Biểu đồ dashboard/thống kê. |
-| html5-qrcode | Quét QR trên trình duyệt. |
-| qrcode.react | Tạo mã QR cho phiên điểm danh. |
-| Framer Motion | Hiệu ứng giao diện. |
-| Lucide React | Icon trong UI. |
+| React 19 | Giao diện người dùng |
+| TypeScript | Kiểu dữ liệu phía client |
+| Vite | Dev server và build tool |
+| React Router DOM 7 | Routing và bảo vệ màn hình |
+| Zustand | Quản lý auth state |
+| Tailwind CSS | Xây dựng UI |
+| Axios | Gọi API |
+| Recharts | Dashboard và thống kê |
+| html5-qrcode | Quét QR bằng camera |
+| qrcode.react | Sinh mã QR |
+| Framer Motion | Hiệu ứng giao diện |
+| Lucide React | Icon |
 
 ## Cấu Trúc Thư Mục
 
@@ -121,33 +223,29 @@ Backend -> Google GenAI/Gemini cho chatbot
 qlsv/
 |-- backend/
 |   |-- prisma/
-|   |   |-- schema.prisma        # Schema dữ liệu Prisma
-|   |   |-- seed.ts              # Dữ liệu khởi tạo
-|   |   `-- migrations/          # Lịch sử migration
+|   |   |-- schema.prisma
+|   |   |-- seed.ts
+|   |   `-- migrations/
 |   |-- src/
-|   |   |-- controllers/         # Xử lý nghiệp vụ API
-|   |   |-- middleware/          # Auth, CSRF, rate limit, security headers
-|   |   |-- routes/              # Khai báo route backend
-|   |   |-- types/               # Type dùng chung
-|   |   `-- utils/               # Prisma, env, email, R2, Excel, bảo mật
+|   |   |-- controllers/
+|   |   |-- middleware/
+|   |   |-- routes/
+|   |   |-- types/
+|   |   `-- utils/
 |   |-- package.json
 |   `-- tsconfig.json
 |
 |-- frontend/
 |   |-- public/
-|   |   |-- logo-qlsv.png
-|   |   |-- thongtinlienhe.html
-|   |   |-- chinhsachbaomat.html
-|   |   `-- dieukhoansudung.html
 |   |-- src/
-|   |   |-- api/                 # Axios client
-|   |   |-- components/          # Component dùng chung
-|   |   |-- constants/           # Dữ liệu cấu hình giao diện/DRL
-|   |   |-- layout/              # Main layout và sidebar
-|   |   |-- pages/               # Các màn hình chức năng
-|   |   |-- store/               # Zustand auth store
-|   |   |-- types/               # Type frontend
-|   |   `-- utils/               # Hàm hỗ trợ frontend
+|   |   |-- api/
+|   |   |-- components/
+|   |   |-- constants/
+|   |   |-- layout/
+|   |   |-- pages/
+|   |   |-- store/
+|   |   |-- types/
+|   |   `-- utils/
 |   |-- package.json
 |   |-- vite.config.ts
 |   `-- .env.example
@@ -155,21 +253,23 @@ qlsv/
 `-- README.md
 ```
 
-## Yêu Cầu Cài Đặt
+## Hướng Dẫn Chạy Dự Án Từ Đầu
 
-- Node.js từ `20` đến dưới `25`.
-- npm.
-- PostgreSQL database local hoặc database đã deploy sẵn.
-- Git nếu muốn clone/pull/push dự án.
+### 1. Điều kiện cần
 
-Kiểm tra phiên bản:
+- Node.js từ `20` đến dưới `25`
+- npm
+- PostgreSQL
+- Git nếu muốn clone và đồng bộ source
+
+Kiểm tra nhanh:
 
 ```bash
 node -v
 npm -v
 ```
 
-## Cài Đặt Nhanh
+### 2. Cài dependency
 
 Tại thư mục gốc của dự án:
 
@@ -181,33 +281,36 @@ cd ../frontend
 npm install
 ```
 
-## Cấu Hình Môi Trường
+### 3. Chuẩn bị môi trường backend
 
-### Backend
+Backend có thể đọc biến môi trường từ:
 
-Tạo file `backend/.env` với nội dung mẫu:
+- `backend/.env`
+- hoặc `.env` ở thư mục gốc dự án
+
+Thực tế an toàn nhất là tạo file `backend/.env`.
+
+## Biến Môi Trường Backend
+
+Tạo file `backend/.env`:
 
 ```env
-# Server
+# Runtime
 NODE_ENV=development
 PORT=5000
 FRONTEND_ORIGIN=http://localhost:5173
 
 # Database
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME?schema=public
 
 # Auth
-JWT_SECRET=replace_with_a_strong_secret_at_least_32_chars
-
-# Cookie khi deploy khác domain hoặc dùng HTTPS
+JWT_SECRET=replace_with_a_strong_secret_32_chars_or_more
 COOKIE_SAME_SITE=lax
 COOKIE_SECURE=false
 COOKIE_DOMAIN=
-
-# Tùy chọn: cho phép token qua query khi thật sự cần
 ALLOW_QUERY_TOKEN_AUTH=false
 
-# Tùy chọn: Cloudflare R2 cho minh chứng
+# Cloudflare R2 - optional
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
@@ -216,39 +319,44 @@ R2_ENDPOINT=
 R2_REGION=auto
 R2_EVIDENCE_PREFIX=evidence
 
-# Tùy chọn: Gmail SMTP
+# Email - optional
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
 MAIL_FROM=
 
-# Tùy chọn: Chatbot AI
+# AI chatbot - optional
 GEMINI_API_KEY=
 GOOGLE_GENAI_API_KEY=
 GEMINI_MODEL=gemma-4-31b-it
 ```
 
-Ghi chú:
+### Ghi chú backend quan trọng
 
-- `DATABASE_URL` là bắt buộc. Backend sẽ không khởi động nếu thiếu biến này.
-- `JWT_SECRET` nên dài tối thiểu 32 ký tự. Trong production, backend bắt buộc secret đủ mạnh.
-- `FRONTEND_ORIGIN` phải trùng origin frontend để CORS và cookie hoạt động đúng.
-- Nếu frontend và backend ở hai domain khác nhau, thường cần `COOKIE_SAME_SITE=none` và `COOKIE_SECURE=true`.
+- `DATABASE_URL` là bắt buộc. Nếu thiếu, backend sẽ không khởi động.
+- `JWT_SECRET` nên cấu hình ngay cả ở local để phiên ổn định giữa các lần restart.
+- Nếu bỏ trống `JWT_SECRET` trong development, backend sẽ tự sinh secret tạm thời; restart server sẽ làm các phiên cũ hết hiệu lực.
+- `FRONTEND_ORIGIN` phải khớp origin frontend thật, ví dụ `http://localhost:5173`.
+- Nếu frontend và backend khác domain khi deploy, thường cần:
+  - `COOKIE_SAME_SITE=none`
+  - `COOKIE_SECURE=true`
+- Muốn dùng chức năng quên mật khẩu qua email, cần cấu hình Gmail SMTP.
+- Muốn chatbot sinh câu trả lời bằng AI, cần cấu hình key Gemini/Google GenAI.
 
-### Frontend
+## Biến Môi Trường Frontend
 
-Tạo `frontend/.env` từ file mẫu:
+Tạo file `frontend/.env` từ file mẫu:
 
 ```powershell
 Copy-Item frontend\.env.example frontend\.env
 ```
 
-Hoặc trên macOS/Linux:
+Hoặc:
 
 ```bash
 cp frontend/.env.example frontend/.env
 ```
 
-Cấu hình local mặc định:
+Giá trị local khuyến nghị:
 
 ```env
 VITE_API_URL=/api
@@ -259,9 +367,12 @@ VITE_LOGIN_LOGO_URL=/logo-qlsv.png
 VITE_MAPS_QUERY_URL=https://www.google.com/maps?q=
 ```
 
-Khi chạy local, Vite sẽ proxy request `/api` sang `VITE_API_TARGET`.
+### Ghi chú frontend quan trọng
 
-Khi deploy production và gọi API trực tiếp:
+- `VITE_API_URL=/api` là cấu hình đẹp nhất cho local vì tận dụng Vite proxy và giữ request đồng origin.
+- `VITE_API_TARGET=http://localhost:5000` là nơi Vite dev server chuyển tiếp request.
+- Không đặt secret thật vào file `.env` của frontend.
+- Khi deploy frontend riêng domain, đặt:
 
 ```env
 VITE_API_URL=https://your-backend.example.com/api
@@ -270,7 +381,7 @@ VITE_API_TARGET=
 
 ## Khởi Tạo Database
 
-Chạy Prisma generate, migration và seed:
+Sau khi đã có `DATABASE_URL`, chạy:
 
 ```bash
 cd backend
@@ -279,128 +390,142 @@ npm run prisma:migrate
 npm run prisma:seed
 ```
 
-Seed hiện tạo dữ liệu khởi đầu gồm:
+### Dữ liệu seed mặc định
 
-| Dữ liệu | Giá trị |
+| Loại | Giá trị |
 | --- | --- |
-| Tài khoản mẫu | `admin` |
+| Username admin mẫu | `admin` |
 | Mật khẩu mẫu | `admin123` |
 | Lớp mẫu | `CNCD2511` |
-| Sinh viên mẫu | `CNCD2511016` |
+| MSSV mẫu | `CNCD2511016` |
 
-Sau khi seed, hãy đổi mật khẩu mặc định ngay. Nếu tài khoản `admin` chưa có quyền quản trị, cập nhật role thành `ADMIN` trong database:
+### Lưu ý sau seed
 
-```sql
-UPDATE "User" SET role = 'ADMIN' WHERE username = 'admin';
-```
-
-Bạn cũng có thể mở Prisma Studio để kiểm tra dữ liệu:
+- Đổi mật khẩu mặc định ngay sau lần đăng nhập đầu tiên.
+- Nếu cần kiểm tra dữ liệu trực quan:
 
 ```bash
 cd backend
 npx prisma studio
 ```
 
-## Chạy Dự Án
+- Nếu tài khoản `admin` chưa có role `ADMIN`, có thể cập nhật thủ công:
 
-Mở hai terminal riêng.
+```sql
+UPDATE "User" SET role = 'ADMIN' WHERE username = 'admin';
+```
 
-Terminal 1 - backend:
+## Chạy Local Development
+
+Mở 2 terminal riêng.
+
+### Terminal 1: chạy backend
 
 ```bash
 cd backend
 npm run dev
 ```
 
-Backend mặc định chạy tại:
+Kỳ vọng:
+
+- Backend chạy ở `http://localhost:5000`
+- Health check:
 
 ```text
-http://localhost:5000
+GET http://localhost:5000/
 ```
 
-Terminal 2 - frontend:
+Kết quả mong đợi:
+
+```text
+Student Management System API is running
+```
+
+### Terminal 2: chạy frontend
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Frontend mặc định chạy tại:
+Kỳ vọng:
 
-```text
-http://localhost:5173
-```
-
-Đăng nhập tại:
+- Frontend chạy ở `http://localhost:5173`
+- Trang đăng nhập:
 
 ```text
 http://localhost:5173/login
 ```
 
-## Các Đường Dẫn Chính
+## Luồng Kiểm Tra Sau Khi Chạy
 
-### Route nội bộ
+Sau khi cả hai service đã lên, nên kiểm tra theo thứ tự này:
 
-| Đường dẫn | Vai trò | Mô tả |
+1. Mở `http://localhost:5173/login`.
+2. Đăng nhập bằng `admin / admin123`.
+3. Kiểm tra backend có set cookie thành công.
+4. Vào các màn hình quản trị như:
+   - `/students`
+   - `/classes`
+   - `/semesters`
+   - `/accounts`
+5. Tạo hoặc kiểm tra học kỳ hoạt động.
+6. Kiểm tra màn hình điểm danh QR và điểm rèn luyện.
+7. Nếu có cấu hình email, thử luồng quên mật khẩu.
+8. Nếu có cấu hình AI, thử chatbot với các câu hỏi như:
+   - "Điểm rèn luyện của tôi"
+   - "Số buổi vắng của tôi"
+   - "Thông tin cá nhân của tôi"
+
+## Route Và API Chính
+
+### Route frontend đáng chú ý
+
+| Route | Vai trò | Mô tả |
 | --- | --- | --- |
-| `/` | Tất cả | Dashboard theo vai trò. |
-| `/login` | Công khai | Trang đăng nhập. |
-| `/students` | `ADMIN`, `BCH` | Quản lý sinh viên. |
-| `/classes` | `ADMIN`, `BCH` | Quản lý lớp. |
-| `/semesters` | `ADMIN`, `BCH` | Quản lý học kỳ. |
-| `/accounts` | `ADMIN`, `BCH` | Quản lý tài khoản. |
-| `/bch` | `ADMIN` | Quản lý ban cán sự. |
-| `/drl` | `ADMIN`, `BCH` | Quản lý điểm rèn luyện. |
-| `/training` | Tất cả | Xem điểm rèn luyện. |
-| `/training/evaluation/self` | `STUDENT` | Sinh viên tự đánh giá DRL. |
-| `/training/approval` | `ADMIN`, `BCH` | Duyệt điểm rèn luyện. |
-| `/evidence/submit` | `STUDENT` | Nộp minh chứng. |
-| `/evidence/review` | `ADMIN`, `BCH` | Duyệt minh chứng. |
-| `/attendance` | Tất cả | Xem chuyên cần/điểm danh. |
-| `/attendance/scan` | Tất cả | Quét QR điểm danh. |
-| `/attendance/manage/class` | `ADMIN`, `BCH` | Tạo phiên QR theo lớp. |
-| `/attendance/manage/activity` | `ADMIN`, `BCH` | Tạo phiên QR cho hoạt động. |
-| `/events` | `ADMIN`, `BCH` | Quản lý sự kiện. |
-| `/support` | `ADMIN` | Quản lý yêu cầu hỗ trợ. |
-| `/profile` | Tất cả | Hồ sơ cá nhân. |
-| `/activity-history` | Tất cả | Lịch sử hoạt động. |
+| `/login` | Công khai | Đăng nhập |
+| `/` | Tất cả sau đăng nhập | Dashboard theo vai trò |
+| `/students` | `ADMIN`, `BCH` | Quản lý sinh viên |
+| `/classes` | `ADMIN`, `BCH` | Quản lý lớp |
+| `/semesters` | `ADMIN`, `BCH` | Quản lý học kỳ |
+| `/accounts` | `ADMIN`, `BCH` | Quản lý tài khoản |
+| `/bch` | `ADMIN` | Quản lý ban cán sự |
+| `/training` | Tất cả | Xem điểm rèn luyện |
+| `/training/evaluation/self` | `STUDENT` | Sinh viên tự đánh giá DRL |
+| `/training/approval` | `ADMIN`, `BCH` | Duyệt phiếu DRL |
+| `/training/statistics` | `ADMIN`, `BCH` | Thống kê DRL |
+| `/evidence/submit` | `STUDENT` | Nộp minh chứng |
+| `/evidence/review` | `ADMIN`, `BCH` | Duyệt minh chứng |
+| `/attendance` | Tất cả | Chuyên cần và điểm danh |
+| `/attendance/scan` | Tất cả | Quét QR |
+| `/attendance/manage/class` | `ADMIN`, `BCH` | Tạo phiên QR theo lớp |
+| `/attendance/manage/activity` | `ADMIN`, `BCH` | Tạo phiên QR cho hoạt động |
+| `/events` | `ADMIN`, `BCH` | Quản lý sự kiện |
+| `/support` | `ADMIN` | Quản lý yêu cầu hỗ trợ |
+| `/profile` | Tất cả | Hồ sơ cá nhân |
+| `/dangky` | Công khai | Trang đăng ký sự kiện |
 
-### Trang công khai
+### Nhóm API backend
 
-| Đường dẫn | Mô tả |
-| --- | --- |
-| `/dangky` | Đăng ký sự kiện công khai. |
-| `/thongtinlienhe.html` | Trang liên hệ và gửi yêu cầu hỗ trợ. |
-| `/chinhsachbaomat.html` | Chính sách bảo mật. |
-| `/dieukhoansudung.html` | Điều khoản sử dụng. |
-
-## API Backend
-
-Backend mount các nhóm API dưới prefix `/api`:
+Backend mount API dưới prefix `/api`:
 
 | Prefix | Chức năng |
 | --- | --- |
-| `/api/auth` | Đăng nhập, đăng xuất, lấy thông tin phiên, quản lý xác thực. |
-| `/api/students` | Quản lý sinh viên. |
-| `/api/classes` | Quản lý lớp. |
-| `/api/semesters` | Quản lý học kỳ. |
-| `/api/training` | Điểm rèn luyện, tự đánh giá, xét duyệt, minh chứng. |
-| `/api/attendance` | Phiên điểm danh, QR, lịch sử chuyên cần. |
-| `/api/bch` | Phân công ban cán sự. |
-| `/api/events` | Sự kiện và đăng ký sự kiện. |
-| `/api/support` | Yêu cầu hỗ trợ. |
-| `/api/chatbot` | Chatbot hỗ trợ sinh viên. |
-| `/api/activity-logs` | Nhật ký hoạt động. |
+| `/api/auth` | Đăng nhập, phiên, cập nhật hồ sơ, đổi mật khẩu, quên mật khẩu |
+| `/api/students` | Sinh viên |
+| `/api/classes` | Lớp học |
+| `/api/semesters` | Học kỳ |
+| `/api/training` | DRL, tự đánh giá, xét duyệt, minh chứng, thống kê |
+| `/api/attendance` | Điểm danh, phiên QR, chuyên cần, export |
+| `/api/bch` | Phân công BCH |
+| `/api/events` | Sự kiện và đăng ký |
+| `/api/support` | Yêu cầu hỗ trợ |
+| `/api/chatbot` | Chatbot sinh viên |
+| `/api/activity-logs` | Nhật ký hoạt động |
 
-Health check đơn giản:
+## Build Và Triển Khai
 
-```text
-GET http://localhost:5000/
-```
-
-## Build Production
-
-### Backend
+### Build backend
 
 ```bash
 cd backend
@@ -408,9 +533,12 @@ npm run build
 npm start
 ```
 
-Lệnh build sẽ chạy Prisma generate trước rồi biên dịch TypeScript sang `backend/dist`.
+`npm run build` sẽ:
 
-### Frontend
+- chạy `prisma generate`
+- biên dịch TypeScript vào `backend/dist`
+
+### Build frontend
 
 ```bash
 cd frontend
@@ -418,127 +546,102 @@ npm run build
 npm run preview
 ```
 
-Thư mục build frontend:
+Output build frontend nằm ở:
 
 ```text
 frontend/dist
 ```
 
-## Gợi Ý Triển Khai
+### Production checklist ngắn
 
-### Backend
-
-Thiết lập các biến môi trường production:
-
-```env
-NODE_ENV=production
-PORT=5000
-DATABASE_URL=postgresql://...
-JWT_SECRET=your_production_secret_at_least_32_chars
-FRONTEND_ORIGIN=https://your-frontend.example.com
-COOKIE_SAME_SITE=none
-COOKIE_SECURE=true
-```
-
-Nếu dùng migration production:
+- Đặt `NODE_ENV=production`
+- Dùng `JWT_SECRET` mạnh, tối thiểu 32 ký tự
+- Kiểm tra `FRONTEND_ORIGIN` đúng domain frontend
+- Nếu frontend/backend khác domain:
+  - `COOKIE_SAME_SITE=none`
+  - `COOKIE_SECURE=true`
+- Dùng HTTPS
+- Chạy migration production:
 
 ```bash
 cd backend
 npx prisma migrate deploy
-npm run build
-npm start
 ```
 
-### Frontend
+- Nếu dùng Cloudflare R2, cấu hình đủ biến R2 trước khi bật upload minh chứng thật.
 
-Nếu frontend được deploy riêng:
+## Bảo Mật Và Vận Hành
 
-```env
-VITE_API_URL=https://your-backend.example.com/api
-VITE_API_TARGET=
-```
+### Các lớp bảo vệ hiện có
 
-Nếu dùng Vercel, kiểm tra `frontend/vercel.json` và cấu hình biến môi trường trong dashboard của Vercel.
+- Hash mật khẩu bằng `bcryptjs`
+- JWT lưu bằng cookie
+- `CORS` whitelist theo `FRONTEND_ORIGIN`
+- Security headers middleware
+- Rate limit cho:
+  - đăng nhập
+  - yêu cầu quên mật khẩu
+  - xác nhận đặt lại mật khẩu
+  - gửi hỗ trợ công khai
+- Ghi nhật ký hoạt động ở nhiều nghiệp vụ quan trọng
 
-### Upload minh chứng
+### Điểm cần biết để đọc repo chính xác
 
-- Local development có thể lưu file theo cấu hình mặc định của backend.
-- Production nên cấu hình Cloudflare R2 để tránh mất file khi server restart hoặc chạy trên môi trường serverless.
+- Hệ thống có cookie CSRF token và helper liên quan.
+- Tuy nhiên, middleware kiểm tra CSRF trong `backend/src/middleware/csrf.middleware.ts` hiện đang bypass hoàn toàn.
+- Nói cách khác: trạng thái thực tế hiện tại đang dựa chủ yếu vào `CORS whitelist + JWT auth + cookie policy + security headers + rate limit`.
+- Nếu muốn tăng cường bảo vệ CSRF trong tương lai, cần khôi phục logic kiểm tra thay vì chỉ để middleware `next()`.
 
-### Cookie, CORS và HTTPS
+### Khuyến nghị vận hành
 
-- `FRONTEND_ORIGIN` phải đúng origin thật của frontend.
-- Khi frontend/backend khác domain, cookie đăng nhập cần `SameSite=None` và `Secure=true`.
-- Trình duyệt yêu cầu HTTPS nếu cookie dùng `SameSite=None`.
-
-## Kiểm Tra Mã Nguồn
-
-Frontend có ESLint:
-
-```bash
-cd frontend
-npm run lint
-```
-
-Backend có thể kiểm tra TypeScript bằng build:
-
-```bash
-cd backend
-npm run build
-```
-
-Dự án hiện chưa có script test tự động riêng trong `package.json`.
+- Không commit `.env`, API key, mật khẩu, `DATABASE_URL`, `JWT_SECRET`
+- Đổi tài khoản/mật khẩu seed sau khi setup
+- Dùng PostgreSQL riêng cho production
+- Tách bucket lưu minh chứng nếu triển khai môi trường thật
+- Kiểm tra lại quyền `ADMIN/BCH/STUDENT` sau khi import dữ liệu
 
 ## Lỗi Thường Gặp
 
 | Hiện tượng | Cách xử lý |
 | --- | --- |
-| Backend báo `Missing DATABASE_URL` | Tạo `backend/.env` và cấu hình đúng `DATABASE_URL`. |
-| Không đăng nhập được hoặc bị quay lại `/login` | Kiểm tra `FRONTEND_ORIGIN`, `COOKIE_SAME_SITE`, `COOKIE_SECURE`, HTTPS và domain cookie. |
-| Frontend gọi API bị CORS | Đảm bảo origin frontend nằm trong `FRONTEND_ORIGIN`. |
-| Vite không proxy API | Kiểm tra `VITE_API_URL=/api` và `VITE_API_TARGET=http://localhost:5000`. |
-| Prisma migrate lỗi kết nối | Kiểm tra database đang chạy, user/password đúng và database tồn tại. |
-| Tài khoản `admin` không thấy menu quản trị | Kiểm tra role trong bảng `User`, đặt thành `ADMIN` nếu cần. |
-| QR scanner không hoạt động | Trình duyệt cần quyền camera, HTTPS hoặc localhost, và thiết bị phải có camera khả dụng. |
-| Điểm danh vị trí không hợp lệ | Kiểm tra quyền location, bán kính phiên điểm danh và tọa độ thiết bị. |
-| Upload minh chứng lỗi R2 | Kiểm tra đủ `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`. |
-| Chatbot không trả lời bằng AI | Kiểm tra `GEMINI_API_KEY` hoặc `GOOGLE_GENAI_API_KEY`. Nếu không có key, chatbot sẽ ưu tiên dữ liệu nội bộ. |
+| Backend báo thiếu `DATABASE_URL` | Tạo `backend/.env` hoặc `.env` ở gốc và cấu hình đúng biến này. |
+| Frontend không gọi được API local | Kiểm tra `VITE_API_URL=/api` và `VITE_API_TARGET=http://localhost:5000`. |
+| Đăng nhập xong nhưng lại quay về `/login` | Kiểm tra cookie, `FRONTEND_ORIGIN`, `COOKIE_SAME_SITE`, `COOKIE_SECURE`. |
+| Bị lỗi CORS | Kiểm tra `FRONTEND_ORIGIN` có đúng origin frontend đang mở hay không. |
+| Prisma migrate lỗi | Đảm bảo PostgreSQL đang chạy, user/password đúng, DB tồn tại. |
+| Quên mật khẩu không gửi mail | Kiểm tra `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM`. |
+| Chatbot không trả lời bằng AI | Kiểm tra `GEMINI_API_KEY` hoặc `GOOGLE_GENAI_API_KEY`. Nếu không có key, chatbot sẽ fallback tri thức cục bộ. |
+| QR scanner không mở được camera | Trình duyệt cần quyền camera; nên dùng `localhost` hoặc HTTPS. |
+| Điểm danh vị trí bị từ chối | Kiểm tra GPS, tọa độ phiên, bán kính check-in và quyền location trên thiết bị. |
+| Upload minh chứng lỗi | Kiểm tra cấu hình R2 nếu đang dùng storage từ xa. |
 
-## Bảo Mật
+## Tác Giả
 
-- Không commit `.env`, API key, database URL, mật khẩu hoặc `JWT_SECRET`.
-- Đổi mật khẩu tài khoản mẫu sau lần chạy đầu tiên.
-- Dùng `JWT_SECRET` đủ dài và khác nhau giữa development/production.
-- Bật HTTPS khi deploy production.
-- Cấu hình cookie đúng domain để tránh lỗi đăng nhập và giảm rủi ro bảo mật.
-- Không bật `ALLOW_QUERY_TOKEN_AUTH=true` nếu không có nhu cầu rõ ràng.
-- Với dữ liệu minh chứng, ưu tiên storage có kiểm soát quyền truy cập như Cloudflare R2.
+### Nhóm phát triển
 
-## Quy Trình Sử Dụng Gợi Ý
+Theo thông tin hiện có trong repo, dự án được phát triển bởi:
 
-1. Quản trị viên đăng nhập bằng tài khoản khởi tạo.
-2. Cập nhật role, đổi mật khẩu và kiểm tra thông tin tài khoản.
-3. Tạo hoặc import lớp, sinh viên và tài khoản.
-4. Tạo học kỳ, gán học kỳ hoạt động cho lớp.
-5. Phân công BCH theo lớp hoặc khoảng số thứ tự sinh viên.
-6. Mở đợt tự đánh giá điểm rèn luyện, sinh viên nộp phiếu và minh chứng.
-7. BCH hoặc quản trị viên xét duyệt minh chứng, điểm rèn luyện.
-8. Tạo phiên điểm danh QR theo lớp hoặc hoạt động.
-9. Sinh viên quét QR, xem chuyên cần, xem điểm và lịch sử hoạt động.
-10. Theo dõi yêu cầu hỗ trợ và xử lý phản hồi khi có vấn đề phát sinh.
+- **Lê Khánh Duy**
+- **Phạm Thái Minh Đăng**
 
-## Thông Tin Liên Hệ
+Thông tin liên hệ đang được khai báo trong README/repo:
 
-| Mục | Thông tin |
-| --- | --- |
-| Dự án | Hệ thống QLSV |
-| Tác giả/nhóm phát triển | Lê Khánh Duy, Phạm Thái Minh Đăng |
-| Email | `toi05022020@gmail.com` |
-| Trang liên hệ | `/thongtinlienhe.html` |
-| Trang đăng ký sự kiện | `/dangky` |
+- Email: `toi05022020@gmail.com`
+
+### Giới thiệu tác giả và định hướng dự án
+
+QLSV cho thấy định hướng xây dựng một sản phẩm không chỉ dừng ở giao diện CRUD cơ bản, mà đi vào các bài toán vận hành thật trong môi trường sinh viên:
+
+- quản lý lớp và sinh viên theo cấu trúc rõ ràng
+- tự động hóa quy trình duyệt điểm rèn luyện
+- số hóa hoạt động điểm danh và xác minh tham gia
+- giảm thao tác thủ công sau hoạt động
+- tạo kênh hỗ trợ và tương tác trực tiếp cho sinh viên
+
+Điểm đáng chú ý là dự án không phát triển rời rạc từng module, mà có tư duy gắn kết nghiệp vụ giữa dữ liệu, vai trò người dùng và thao tác thực tế. Đây là dấu hiệu của một đồ án hoặc sản phẩm được làm với mục tiêu ứng dụng thật, chứ không chỉ để trình diễn công nghệ.
 
 ## Bản Quyền
 
 © 2026 Lê Khánh Duy. All Rights Reserved.
 
-Toàn bộ mã nguồn, thiết kế giao diện, cấu trúc dữ liệu và logic nghiệp vụ thuộc quyền sở hữu của tác giả. Không sao chép, chỉnh sửa, tái phân phối hoặc sử dụng cho mục đích thương mại khi chưa có sự đồng ý bằng văn bản của tác giả.
+Toàn bộ mã nguồn, giao diện, cấu trúc dữ liệu và logic nghiệp vụ thuộc quyền sở hữu của tác giả theo tuyên bố hiện có trong dự án. Việc sao chép, chỉnh sửa, phân phối lại hoặc sử dụng cho mục đích thương mại nên có sự đồng ý phù hợp từ chủ sở hữu.

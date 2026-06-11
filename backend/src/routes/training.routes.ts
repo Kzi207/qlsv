@@ -3,6 +3,7 @@ import {
   createOrUpdateTrainingScore, 
   getTrainingScoreByStudent, 
   getTrainingScores, 
+  getTrainingStatistics,
   getTrainingScoreById,
   approveTrainingScore,
   createTrainingScore,
@@ -21,6 +22,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/export', roleMiddleware(['ADMIN']), exportTrainingScoresExcel);
+router.get('/statistics', roleMiddleware(['ADMIN', 'BCH']), getTrainingStatistics);
 router.get('/submission-status', getSubmissionStatus);
 router.get('/evidence/student', getStudentCustomEvidence);
 router.get('/evidence/all', roleMiddleware(['ADMIN', 'BCH']), getAllCustomEvidence);

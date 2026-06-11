@@ -3,22 +3,29 @@ import prisma from '../utils/prisma.js';
 
 export const getClasses = async (req: Request, res: Response) => {
   try {
+    const includeCounts = String(req.query?.include_counts || '').trim().toLowerCase() === 'true';
     const classes = await (prisma as any).class.findMany({
-      include: {
-        _count: {
-          select: { students: true }
-        }
-      },
-      orderBy: { name: 'asc' }
+      select: includeCounts
+        ? {
+            name: true,
+            active_semester_id: true,
+            _count: {
+              select: { students: true },
+            },
+          }
+        : {
+            name: true,
+            active_semester_id: true,
+          },
+      orderBy: { name: 'asc' },
     });
-    
-    // Map to a friendlier format
+
     const result = classes.map((c: any) => ({
       name: c.name,
-      studentCount: c._count.students,
-      active_semester_id: c.active_semester_id
+      studentCount: includeCounts ? c._count.students : undefined,
+      active_semester_id: c.active_semester_id,
     }));
-    
+
     res.json(result);
   } catch (error) {
     console.error('Lỗi khi lấy danh sách lớp:', error);
