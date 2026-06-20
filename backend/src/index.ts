@@ -6,4 +6,4 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Trigger reload for new env parameters
+// Trigger reload for new env parameters (Google OAuth credentials)
