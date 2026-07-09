@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import { getMailerContext, escapeHtml } from './mailer.js';
 
+const require = createRequire(import.meta.url);
 const getExcelJS = () => require('exceljs');
-const getNodemailer = () => require('nodemailer');
 
 export interface CriterionReportMeta {
   id: string;
@@ -67,16 +67,6 @@ const SECTION_MAX_POINTS: Record<string, number> = {
   '5': 10,
 };
 
-let transporter: any | null | undefined;
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
 const parseJsonLike = (input: unknown) => {
   let parsed = input;
 
@@ -90,67 +80,6 @@ const parseJsonLike = (input: unknown) => {
   }
 
   return parsed;
-};
-
-const getTransporter = () => {
-  if (transporter !== undefined) return transporter;
-
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-
-  if (!user || !pass) {
-    console.warn('[Email] Missing GMAIL_USER or GMAIL_APP_PASSWORD, skip sending mail');
-    transporter = null;
-    return transporter;
-  }
-
-  try {
-    const nodemailer = getNodemailer();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false // Helps with some network environments
-      }
-    });
-    console.log('[Email] Transporter initialized for', user);
-  } catch (err) {
-    console.error('[Email] Failed to create transporter:', err);
-    transporter = null;
-  }
-
-  return transporter;
-};
-
-const getFromAddress = () => {
-  const fromEmail = process.env.MAIL_FROM || process.env.GMAIL_USER;
-  if (!fromEmail) return undefined;
-  return `"Hệ Thống Đánh Giá Rèn Luyện" <${fromEmail}>`;
-};
-
-const getMailerContext = () => {
-  const activeTransporter = getTransporter();
-  const from = getFromAddress();
-
-  if (!activeTransporter) {
-    return {
-      transporter: null,
-      from: undefined,
-      error: 'Hệ thống chưa cấu hình GMAIL_USER hoặc GMAIL_APP_PASSWORD.',
-    };
-  }
-
-  if (!from) {
-    return {
-      transporter: null,
-      from: undefined,
-      error: 'Hệ thống chưa cấu hình MAIL_FROM hoặc GMAIL_USER.',
-    };
-  }
-
-  return { transporter: activeTransporter, from, error: null };
 };
 
 function normalizeDetails(details: unknown, adminDetails: unknown): Record<string, NormalizedDetail> {
@@ -461,15 +390,4 @@ export async function sendApprovalEmail(data: EmailApprovalData): Promise<EmailS
   }
 }
 
-export async function verifyEmailConfig(): Promise<boolean> {
-  try {
-    const activeTransporter = getTransporter();
-    if (!activeTransporter) return false;
-    await activeTransporter.verify();
-    console.log('[Email] Configuration verified successfully');
-    return true;
-  } catch (error) {
-    console.error('[Email] Configuration error:', error);
-    return false;
-  }
-}
+export { verifyEmailConfig } from './mailer.js';

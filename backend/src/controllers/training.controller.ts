@@ -300,31 +300,29 @@ export const createTrainingScore = async (req: AuthRequest, res: Response) => {
       classId: score.student?.class_id,
     });
 
-    let submissionEmail = { sent: false, message: 'Sinh viên chưa có email.' };
-    
-    if (score.student?.email) {
-      try {
-        submissionEmail = await sendSubmissionReceivedEmail({
-          studentEmail: score.student.email,
-          studentName: score.student.name,
-          studentId: score.student.student_code,
-          semester: typeof score.semester === 'object' ? score.semester?.name : score.semester_id,
-          classId: score.student.class_id,
-        });
-        console.log(`[Email] Submission email result for ${score.student.email}:`, submissionEmail.sent ? 'SUCCESS' : 'FAILED');
-      } catch (emailError: any) {
-        console.error('[Email] Submission email crash:', emailError);
-        submissionEmail = { sent: false, message: emailError?.message || 'Lỗi gửi mail hệ thống' };
-      }
-    }
-
+    // Respond to client immediately — don't block on email
     res.status(201).json({
       ...score,
       submission: submissionStatus,
       notification: {
-        submissionEmail,
+        submissionEmail: { sent: false, queued: true, message: 'Email xác nhận đang được gửi ngầm...' },
       },
     });
+
+    // Fire-and-forget email sending in background
+    if (score.student?.email) {
+      sendSubmissionReceivedEmail({
+        studentEmail: score.student.email,
+        studentName: score.student.name,
+        studentId: score.student.student_code,
+        semester: typeof score.semester === 'object' ? score.semester?.name : score.semester_id,
+        classId: score.student.class_id,
+      }).then((result) => {
+        console.log(`[Email] Submission email for ${score.student.email}:`, result.sent ? 'OK' : 'FAILED');
+      }).catch((emailError: any) => {
+        console.error('[Email] Submission email crash:', emailError);
+      });
+    }
   } catch (error) {
     console.error('Error in createTrainingScore:', error);
     res.status(500).json({ message: 'Server error' });
@@ -357,6 +355,8 @@ export const getSubmissionStatus = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+
 
 const TRAINING_REVIEW_STATUSES = new Set(['PENDING', 'APPROVED', 'REJECTED']);
 

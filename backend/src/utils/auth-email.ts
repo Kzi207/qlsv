@@ -1,51 +1,4 @@
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const getNodemailer = () => require('nodemailer');
-
-let transporter: any | null | undefined;
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const getTransporter = () => {
-  if (transporter !== undefined) return transporter;
-
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-
-  if (!user || !pass) {
-    transporter = null;
-    return transporter;
-  }
-
-  try {
-    const nodemailer = getNodemailer();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: { user, pass },
-      tls: { rejectUnauthorized: false },
-    });
-  } catch (error) {
-    console.error('[AuthEmail] Failed to create transporter:', error);
-    transporter = null;
-  }
-
-  return transporter;
-};
-
-const getFromAddress = () => {
-  const fromEmail = process.env.MAIL_FROM || process.env.GMAIL_USER;
-  if (!fromEmail) return undefined;
-  return `"Hệ Thống QLSV" <${fromEmail}>`;
-};
+import { getMailerContext, escapeHtml } from './mailer.js';
 
 export const sendPasswordResetCodeEmail = async (input: {
   to: string;
@@ -54,8 +7,7 @@ export const sendPasswordResetCodeEmail = async (input: {
   code: string;
   expiresInMinutes: number;
 }) => {
-  const activeTransporter = getTransporter();
-  const from = getFromAddress();
+  const { transporter: activeTransporter, from } = getMailerContext('Hệ Thống QLSV');
 
   if (!activeTransporter || !from) {
     return {
