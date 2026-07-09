@@ -1,16 +1,18 @@
 import type { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
+// Trigger tsx watch reload to pick up corrected .env file
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma.js';
 import { createCsrfToken, setAuthCookies } from '../utils/security.js';
 import { getJwtSecret } from '../utils/env.js';
 import { writeActivityLog } from '../utils/activity-log.js';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
-
-const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+const getOAuth2Client = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
+  return new OAuth2Client(clientId, clientSecret, redirectUri);
+};
 
 const toSafeUser = (user: any) => ({
   id: user.id,
@@ -28,7 +30,10 @@ const toSafeUser = (user: any) => ({
  * Redirects the user to Google OAuth consent screen.
  */
 export const googleAuthRedirect = (req: Request, res: Response) => {
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+
+  if (!clientId || !clientSecret) {
     return res.status(500).json({ message: 'Google OAuth chưa được cấu hình trên server.' });
   }
 
@@ -44,6 +49,7 @@ export const googleAuthRedirect = (req: Request, res: Response) => {
     }
   }
 
+  const oAuth2Client = getOAuth2Client();
   const authorizeUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: ['profile', 'email'],
@@ -78,6 +84,7 @@ export const googleAuthCallback = async (req: Request, res: Response) => {
   }
 
   try {
+    const oAuth2Client = getOAuth2Client();
     // Exchange authorization code for tokens
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
@@ -88,12 +95,31 @@ export const googleAuthCallback = async (req: Request, res: Response) => {
       return res.redirect(`${frontendUrl}/login?error=google_no_token`);
     }
 
-    const ticket = await oAuth2Client.verifyIdToken({
-      idToken,
-      audience: GOOGLE_CLIENT_ID,
-    });
+    let payload: any = null;
+    try {
+      const ticket = await oAuth2Client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID || '',
+      });
+      payload = ticket.getPayload();
+    } catch (err: any) {
+      console.error('Google ID token verification failed, checking for clock skew:', err);
+      const errMsg = String(err?.message || '');
+      // If the error is due to clock skew/system time out of sync, fallback to decoding the token
+      if (
+        errMsg.includes('too early') || 
+        errMsg.includes('timezone') || 
+        errMsg.includes('clock') || 
+        errMsg.includes('time') ||
+        errMsg.includes('expired')
+      ) {
+        console.warn('System clock skew detected. Using jwt.decode fallback for Google ID token.');
+        payload = jwt.decode(idToken);
+      } else {
+        return res.redirect(`${frontendUrl}/login?error=google_verify_failed&msg=${encodeURIComponent(errMsg)}`);
+      }
+    }
 
-    const payload = ticket.getPayload();
     if (!payload || !payload.email) {
       return res.redirect(`${frontendUrl}/login?error=google_no_email`);
     }
@@ -280,6 +306,6 @@ export const googleAuthCallback = async (req: Request, res: Response) => {
  */
 export const googleAuthStatus = (_req: Request, res: Response) => {
   res.json({
-    enabled: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+    enabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   });
 };

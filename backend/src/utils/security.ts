@@ -180,24 +180,18 @@ export const clearAuthCookies = (req: Request, res: Response) => {
   const authOptions = getAuthCookieOptions(req);
   const csrfOptions = getCsrfCookieOptions(req);
 
-  const deleteOptions = (base: CookieOptions): CookieOptions => {
-    // Chrome mobile is very sensitive to matching options during deletion
-    const { maxAge, ...rest } = base;
-    return {
-      ...rest,
-      expires: new Date(0),
-      maxAge: 0,
-    };
-  };
+  // Remove maxAge so that clearCookie works correctly
+  const { maxAge: _m1, ...authClearOptions } = authOptions;
+  const { maxAge: _m2, ...csrfClearOptions } = csrfOptions;
 
   // 1. Clear with configured domain.
-  res.cookie(AUTH_COOKIE_NAME, '', deleteOptions(authOptions));
-  res.cookie(CSRF_COOKIE_NAME, '', deleteOptions(csrfOptions));
+  res.clearCookie(AUTH_COOKIE_NAME, authClearOptions);
+  res.clearCookie(CSRF_COOKIE_NAME, csrfClearOptions);
 
   // 2. Clear without domain (host-only cookie)
-  const { domain: _d1, ...authNoDomain } = deleteOptions(authOptions);
-  const { domain: _d2, ...csrfNoDomain } = deleteOptions(csrfOptions);
+  const { domain: _d1, ...authNoDomain } = authClearOptions;
+  const { domain: _d2, ...csrfNoDomain } = csrfClearOptions;
   
-  res.cookie(AUTH_COOKIE_NAME, '', authNoDomain);
-  res.cookie(CSRF_COOKIE_NAME, '', csrfNoDomain);
+  res.clearCookie(AUTH_COOKIE_NAME, authNoDomain);
+  res.clearCookie(CSRF_COOKIE_NAME, csrfNoDomain);
 };

@@ -25,6 +25,7 @@ const Login = () => {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const navigate = useNavigate();
   const mobileBackgroundStyle = LOGIN_BACKGROUND_IMAGE_URL
     ? {
@@ -90,10 +91,13 @@ const Login = () => {
           window.history.replaceState({}, '', '/login');
           const redirectPath = params.get('redirect') || '/';
           navigate(redirectPath, { replace: true });
+        } else {
+          initializeAuth();
         }
       } catch {
         toast.error('Không thể xử lý dữ liệu đăng nhập Google.');
         window.history.replaceState({}, '', '/login');
+        initializeAuth();
       }
       return;
     }
@@ -110,8 +114,9 @@ const Login = () => {
       };
       toast.error(errorMessages[googleError] || 'Đăng nhập Google thất bại.');
       window.history.replaceState({}, '', '/login');
+      initializeAuth();
     }
-  }, [login, navigate]);
+  }, [login, navigate, initializeAuth]);
 
   const handleGoogleLogin = () => {
     setGoogleLoading(true);

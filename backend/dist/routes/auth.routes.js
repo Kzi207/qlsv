@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { changePassword, confirmPasswordReset, login, logout, me, requestPasswordResetCode, updateProfile } from '../controllers/auth.controller.js';
+import { googleAuthRedirect, googleAuthCallback, googleAuthStatus } from '../controllers/google-auth.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { createRateLimitMiddleware } from '../middleware/rate-limit.middleware.js';
 const router = Router();
@@ -36,5 +37,9 @@ router.get('/me', authMiddleware, me);
 router.patch('/profile', authMiddleware, updateProfile);
 router.patch('/change-password', authMiddleware, changePassword);
 router.post('/logout', logout);
+// Google OAuth routes
+router.get('/google', googleAuthRedirect);
+router.get('/google/callback', googleAuthCallback);
+router.get('/google/status', googleAuthStatus);
 export default router;
 //# sourceMappingURL=auth.routes.js.map

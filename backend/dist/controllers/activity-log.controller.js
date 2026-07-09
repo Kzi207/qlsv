@@ -1,4 +1,9 @@
 import prisma from '../utils/prisma.js';
+const LOG_TYPE_ACTIONS = {
+    AUTH: ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'PROFILE_UPDATE', 'PASSWORD_CHANGE', 'PASSWORD_RESET'],
+    TRAINING_SUBMISSION: ['TRAINING_SUBMISSION_CREATE', 'TRAINING_SUBMISSION_UPDATE', 'CUSTOM_EVIDENCE_SUBMIT'],
+    TRAINING_CHANGE: ['TRAINING_APPROVAL_UPDATE', 'CUSTOM_EVIDENCE_REVIEW'],
+};
 const parsePositiveInt = (value, fallback, max) => {
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || parsed <= 0)
@@ -12,14 +17,19 @@ export const getActivityLogs = async (req, res) => {
     const skip = (page - 1) * limit;
     const category = String(req.query.category || '').trim();
     const action = String(req.query.action || '').trim();
+    const type = String(req.query.type || '').trim().toUpperCase();
     const keyword = String(req.query.keyword || '').trim();
     const classId = String(req.query.classId || '').trim();
     const where = {};
     const andFilters = [];
     if (category)
         where.category = category;
-    if (action)
+    if (action) {
         where.action = action;
+    }
+    else if (type && LOG_TYPE_ACTIONS[type]) {
+        where.action = { in: LOG_TYPE_ACTIONS[type] };
+    }
     if (keyword) {
         andFilters.push({
             OR: [
@@ -34,16 +44,13 @@ export const getActivityLogs = async (req, res) => {
             ],
         });
     }
-    if (role === 'STUDENT') {
+    if (role !== 'ADMIN') {
         andFilters.push({
             OR: [
                 { userId: Number(req.user?.id || 0) },
                 { studentId: Number(req.user?.studentId || 0) },
             ],
         });
-    }
-    else if (role === 'BCH') {
-        where.classId = String(req.user?.class_id || '').trim();
     }
     else if (classId) {
         where.classId = classId;

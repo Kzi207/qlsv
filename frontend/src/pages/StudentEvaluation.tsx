@@ -157,7 +157,7 @@ export default function StudentEvaluation() {
             <Award size={10} />
             Hệ thống nộp phiếu ĐRL
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Kê khai điểm rèn luyện</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Phiếu điểm rèn luyện</h1>
           <p className="text-slate-400 font-bold text-xs">Điền đầy đủ thông tin và minh chứng để được xét duyệt</p>
         </div>
 

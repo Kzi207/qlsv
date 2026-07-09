@@ -52,6 +52,13 @@ function App() {
   const isStudent = normalizeUserRole(user?.role) === 'STUDENT';
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('google_auth')) {
+      // Bỏ qua initializeAuth nếu URL chứa google_auth vì trang Login.tsx sẽ tự xử lý việc
+      // lưu token và chuyển hướng. Nếu chạy lúc này sẽ gửi request /auth/me không kèm token,
+      // khi nhận phản hồi 401 sẽ vô tình xóa token vừa được Login.tsx lưu.
+      return;
+    }
     initializeAuth();
   }, [initializeAuth]);
 

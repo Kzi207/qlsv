@@ -28,6 +28,7 @@ const toSafeUser = (user) => ({
     username: user.username,
     name: user.name,
     email: user.email,
+    phone: user.phone,
     role: String(user.role || '').toUpperCase(),
     studentId: user.studentId,
     class_id: user.class_id,
@@ -49,6 +50,7 @@ export const login = async (req, res) => {
                 password: true,
                 name: true,
                 email: true,
+                phone: true,
                 role: true,
                 studentId: true,
                 class_id: true,
@@ -130,6 +132,7 @@ export const me = async (req, res) => {
                 username: true,
                 name: true,
                 email: true,
+                phone: true,
                 role: true,
                 studentId: true,
                 class_id: true,
@@ -163,26 +166,82 @@ export const updateProfile = async (req, res) => {
     if (!req.user?.id) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
+    const username = String(req.body?.username || '').trim();
     const name = String(req.body?.name || '').trim();
     const emailValue = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+    const phoneValue = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
+    if (!username) {
+        return res.status(400).json({ message: 'Username is required' });
+    }
     if (!name) {
         return res.status(400).json({ message: 'Name is required' });
     }
     try {
+        const currentUser = await prisma.user.findUnique({
+            where: { id: Number(req.user.id) },
+            select: {
+                id: true,
+                username: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+                studentId: true,
+                class_id: true,
+            },
+        });
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const duplicateUsername = await prisma.user.findFirst({
+            where: {
+                username,
+                NOT: { id: currentUser.id },
+            },
+            select: { id: true },
+        });
+        if (duplicateUsername) {
+            return res.status(409).json({ message: 'Username already exists' });
+        }
         const updatedUser = await prisma.user.update({
             where: { id: Number(req.user.id) },
             data: {
+                username,
                 name,
                 email: emailValue || null,
+                phone: phoneValue || null,
             },
         });
+        const csrfToken = getCookieValue(req, CSRF_COOKIE_NAME) || createCsrfToken();
+        const accessToken = jwt.sign({
+            id: updatedUser.id,
+            username: updatedUser.username,
+            role: updatedUser.role,
+            studentId: updatedUser.studentId,
+            class_id: updatedUser.class_id,
+        }, getJwtSecret(), { expiresIn: '24h' });
+        setAuthCookies(req, res, accessToken, csrfToken);
         await writeActivityLog(req, {
             action: 'PROFILE_UPDATE',
             category: 'AUTH',
             targetType: 'User',
             targetId: updatedUser.id,
             summary: `${updatedUser.name || updatedUser.username} cap nhat ho so ca nhan`,
-            details: { name: updatedUser.name, email: updatedUser.email },
+            details: {
+                before: {
+                    username: currentUser.username,
+                    name: currentUser.name,
+                    email: currentUser.email,
+                    phone: currentUser.phone,
+                },
+                after: {
+                    username: updatedUser.username,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    phone: updatedUser.phone,
+                },
+            },
+            username: updatedUser.username,
             userName: updatedUser.name,
             studentId: updatedUser.studentId,
             classId: updatedUser.class_id,

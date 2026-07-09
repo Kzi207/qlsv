@@ -251,6 +251,17 @@ npx ts-node prisma/cleanup-duplicates.ts
 npx ts-node prisma/cleanup-all-duplicates.ts
 ```
 
+### Load Test Nhanh
+```bash
+# Chạy test tải theo domain mặc định https://be.khanhduy.id.vn/
+python scratch/load_tester.py --start-rps 5 --step-rps 5 --max-rps 100 --duration-per-step 5
+
+# Test một endpoint cụ thể
+python scratch/load_tester.py --url https://be.khanhduy.id.vn/api/auth/login --method POST --json '{"email":"a@b.com","password":"123456"}'
+```
+
+Script sẽ in latency từng mức tải trên console và tự dừng khi phản hồi chậm hoặc bắt đầu lỗi/nghẽn.
+
 ## 📝 Environment Variables Đầy Đủ
 
 ```env
