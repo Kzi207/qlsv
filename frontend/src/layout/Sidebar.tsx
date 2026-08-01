@@ -47,6 +47,7 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
         { name: 'Quản lý DRL', path: '/drl', icon: ClipboardCheck, roles: ['ADMIN', 'BCH'] },
         { name: 'Thống kê ĐRL', path: '/training/statistics', icon: BarChart3, roles: ['ADMIN', 'BCH'] },
         { name: 'Duyệt minh chứng', path: '/evidence/review', icon: Award, roles: ['ADMIN', 'BCH'] },
+        { name: 'Nhập minh chứng Excel', path: '/evidence/import-excel', icon: Award, roles: ['ADMIN', 'BCH'] },
       ]
     },
     {

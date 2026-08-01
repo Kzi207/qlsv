@@ -1471,3 +1471,627 @@ export const reviewCustomEvidence = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const importTrainingScoresExcel = async (req: AuthRequest, res: Response) => {
+  if (!req.file || !req.file.buffer) {
+    return res.status(400).json({ message: 'Vui lòng tải lên file Excel' });
+  }
+
+  const { semester: semesterName, criterionId, points, activityName } = req.body;
+
+  if (!semesterName) {
+    return res.status(400).json({ message: 'Vui lòng chọn học kỳ' });
+  }
+  if (!criterionId) {
+    return res.status(400).json({ message: 'Vui lòng chọn tiêu chí' });
+  }
+  const pts = Number(points);
+  if (isNaN(pts) || pts <= 0) {
+    return res.status(400).json({ message: 'Điểm cộng phải là số dương lớn hơn 0' });
+  }
+  if (!activityName || !activityName.trim()) {
+    return res.status(400).json({ message: 'Vui lòng nhập tên hoạt động' });
+  }
+
+  try {
+    const semName = normalizeSemesterName(semesterName);
+    
+    // Check if the semester exists
+    const semesterRecord = await prisma.semester.findUnique({
+      where: { name: semName },
+    });
+    if (!semesterRecord) {
+      return res.status(400).json({ message: `Học kỳ ${semName} không tồn tại` });
+    }
+
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet || worksheet.rowCount === 0) {
+      return res.status(400).json({ message: 'File Excel trống' });
+    }
+
+    let studentCodeCol = -1;
+    let nameCol = -1;
+    let headerRow = 1;
+
+    for (let r = 1; r <= Math.min(worksheet.rowCount, 20); r++) {
+      const row = worksheet.getRow(r);
+      let foundHeader = false;
+      row.eachCell((cell: any, colNumber: number) => {
+        const val = cell.value;
+        let cellStr = '';
+        if (val !== null && val !== undefined) {
+          if (typeof val === 'object') {
+            if ((val as any).result !== undefined) {
+              cellStr = String((val as any).result);
+            } else if ((val as any).richText) {
+              cellStr = (val as any).richText.map((t: any) => t.text || '').join('');
+            } else {
+              cellStr = String(val);
+            }
+          } else {
+            cellStr = String(val);
+          }
+        } else {
+          cellStr = cell.text || '';
+        }
+
+        const cellVal = cellStr.trim().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (
+          cellVal.includes('mssv') || 
+          cellVal.includes('ma so') || 
+          cellVal.includes('ma sinh vien') || 
+          cellVal.includes('ma sv') ||
+          cellVal.includes('student code')
+        ) {
+          studentCodeCol = colNumber;
+          foundHeader = true;
+        } else if (
+          cellVal.includes('ten') || 
+          cellVal.includes('ho ten') || 
+          cellVal.includes('ho va ten') || 
+          cellVal.includes('fullname') ||
+          cellVal.includes('full name')
+        ) {
+          nameCol = colNumber;
+        }
+      });
+
+      if (foundHeader) {
+        headerRow = r;
+        break;
+      }
+    }
+
+    if (studentCodeCol === -1) {
+      studentCodeCol = 1; // Fallback to column 1
+    }
+
+    const rowsToProcess: { studentCode: string; name: string }[] = [];
+    for (let r = headerRow + 1; r <= worksheet.rowCount; r++) {
+      const row = worksheet.getRow(r);
+      const mssvVal = row.getCell(studentCodeCol).value;
+      const mssv = mssvVal ? String(mssvVal).trim() : '';
+      if (!mssv) continue;
+
+      // Skip if the parsed value is a header variation
+      const mssvNormalized = mssv.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+      if (
+        mssvNormalized === 'mssv' ||
+        mssvNormalized === 'masinhvien' ||
+        mssvNormalized === 'masovien' ||
+        mssvNormalized === 'masv' ||
+        mssvNormalized === 'studentcode' ||
+        mssvNormalized === 'maso'
+      ) {
+        continue;
+      }
+
+      const nameVal = nameCol !== -1 ? row.getCell(nameCol).value : '';
+      const name = nameVal ? String(nameVal).trim() : '';
+
+      rowsToProcess.push({ studentCode: mssv, name });
+    }
+
+    if (rowsToProcess.length === 0) {
+      return res.status(400).json({ message: 'Không tìm thấy dữ liệu MSSV trong file' });
+    }
+
+    const role = String(req.user?.role || '').toUpperCase();
+    const bchClassId = String(req.user?.class_id || '').trim().toUpperCase();
+
+    const successList: string[] = [];
+    const notFoundList: string[] = [];
+    const mismatchList: string[] = [];
+    const duplicateList: string[] = [];
+
+    // BULK RETRIEVAL OPTIMIZATION
+    const studentCodes = rowsToProcess.map(item => item.studentCode);
+    
+    // 1. Fetch all students in bulk
+    const students = await prisma.student.findMany({
+      where: {
+        student_code: { in: studentCodes }
+      }
+    });
+    
+    const studentMap = new Map(students.map(s => [s.student_code, s]));
+
+    // 2. Fetch all existing training scores in bulk
+    const studentIds = students.map(s => s.id);
+    const existingScores = await (prisma.trainingScore as any).findMany({
+      where: {
+        student_id: { in: studentIds },
+        semester_id: semName
+      }
+    });
+
+    const scoreMap = new Map(existingScores.map((s: any) => [s.student_id, s]));
+
+    // 3. Process rows in parallel batches to prevent DB connection pool exhaustion while maximizing speed
+    const batchSize = 15;
+    for (let i = 0; i < rowsToProcess.length; i += batchSize) {
+      const batch = rowsToProcess.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (item) => {
+          const student = studentMap.get(item.studentCode);
+          if (!student) {
+            notFoundList.push(item.studentCode);
+            return;
+          }
+
+          if (role === 'BCH' && String(student.class_id || '').trim().toUpperCase() !== bchClassId) {
+            mismatchList.push(item.studentCode);
+            return;
+          }
+
+          const existingScore: any = scoreMap.get(student.id);
+          let details = existingScore ? parseDetails(existingScore.details) : {};
+
+          if (!details[criterionId]) {
+            details[criterionId] = { score: 0, files: [], activities: [], customEvidence: [] };
+          } else {
+            if (!details[criterionId].customEvidence) {
+              details[criterionId].customEvidence = [];
+            }
+            if (!details[criterionId].activities) {
+              details[criterionId].activities = [];
+            }
+          }
+
+          // Check for duplicate activity name in customEvidence
+          const customEvidenceList = details[criterionId].customEvidence;
+          const isDuplicate = customEvidenceList.some(
+            (ev: any) => ev.activityName === activityName.trim() && ev.status === 'APPROVED'
+          );
+
+          if (isDuplicate) {
+            duplicateList.push(item.studentCode);
+            return;
+          }
+
+          const newItem = {
+            id: 'excel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            activityName: activityName.trim(),
+            points: pts,
+            status: 'APPROVED',
+            files: [],
+            submittedAt: new Date().toISOString(),
+            sectionId: criterionId.split('.')[0],
+            criterionId: criterionId,
+          };
+
+          details[criterionId].customEvidence.push(newItem);
+
+          const actLog = {
+            source: 'CUSTOM_EVIDENCE',
+            evidenceId: newItem.id,
+            activityName: newItem.activityName,
+            points: newItem.points,
+            checkedInAt: new Date().toISOString(),
+          };
+          details[criterionId].activities.push(actLog);
+
+          const totals = recalculateScoreDetails(details);
+
+          if (existingScore) {
+            let hasAdminScore = existingScore.admin_total !== null && existingScore.admin_total !== undefined;
+            let admin_y_thuc = 0;
+            let admin_hoat_dong = 0;
+            let admin_ky_luat = 0;
+            let admin_total = 0;
+            let adminDetailsJson = '{}';
+
+            if (hasAdminScore) {
+              let adminDetails = parseDetails(existingScore.admin_details);
+              const currentVal = Number(adminDetails[criterionId] || 0);
+              adminDetails[criterionId] = currentVal + pts;
+
+              // Recalculate admin totals
+              let sec1 = 0;
+              let sec2 = 0;
+              let sec3 = 0;
+              let sec4 = 0;
+              let sec5 = 0;
+              for (const [key, value] of Object.entries(adminDetails)) {
+                const scoreNum = Number(value) || 0;
+                const match = key.match(/(\d+)\.(\d+)/);
+                if (match) {
+                  const sectionNum = match[1];
+                  if (sectionNum === '1') sec1 += scoreNum;
+                  else if (sectionNum === '2') sec2 += scoreNum;
+                  else if (sectionNum === '3') sec3 += scoreNum;
+                  else if (sectionNum === '4') sec4 += scoreNum;
+                  else if (sectionNum === '5') sec5 += scoreNum;
+                }
+              }
+              admin_y_thuc = Math.min(sec1, 20);
+              admin_hoat_dong = Math.min(sec2 + sec3, 45);
+              admin_ky_luat = Math.min(sec4 + sec5, 35);
+              admin_total = Math.min(admin_y_thuc + admin_hoat_dong + admin_ky_luat, 100);
+              adminDetailsJson = JSON.stringify(adminDetails);
+            }
+
+            await (prisma as any).$executeRaw`
+              UPDATE "TrainingScore"
+              SET 
+                y_thuc = ${totals.y_thuc},
+                hoat_dong = ${totals.hoat_dong},
+                ky_luat = ${totals.ky_luat},
+                total = ${totals.total},
+                details = ${JSON.stringify(details)}::jsonb,
+                "updatedAt" = NOW(),
+                admin_y_thuc = CASE WHEN admin_total IS NOT NULL THEN ${admin_y_thuc} ELSE admin_y_thuc END,
+                admin_hoat_dong = CASE WHEN admin_total IS NOT NULL THEN ${admin_hoat_dong} ELSE admin_hoat_dong END,
+                admin_ky_luat = CASE WHEN admin_total IS NOT NULL THEN ${admin_ky_luat} ELSE admin_ky_luat END,
+                admin_total = CASE WHEN admin_total IS NOT NULL THEN ${admin_total} ELSE admin_total END,
+                admin_details = CASE WHEN admin_total IS NOT NULL THEN ${adminDetailsJson}::jsonb ELSE admin_details END
+              WHERE id = ${existingScore.id}
+            `;
+          } else {
+            await (prisma.trainingScore as any).create({
+              data: {
+                student_id: student.id,
+                semester_id: semName,
+                y_thuc: totals.y_thuc,
+                hoat_dong: totals.hoat_dong,
+                ky_luat: totals.ky_luat,
+                total: totals.total,
+                status: 'PENDING',
+                details: details,
+              },
+            });
+          }
+
+          successList.push(item.studentCode);
+        })
+      );
+    }
+
+    await writeActivityLog(req, {
+      action: 'DRL_BULK_IMPORT',
+      category: 'DRL',
+      targetType: 'TrainingScore',
+      summary: `Nhap file Excel cong diem ren luyen tieu chi ${criterionId} cho hoc ky ${semName}`,
+      details: {
+        semester: semName,
+        criterionId,
+        points: pts,
+        activityName,
+        successCount: successList.length,
+        notFoundCount: notFoundList.length,
+        duplicateCount: duplicateList.length,
+        mismatchCount: mismatchList.length,
+      },
+    });
+
+    return res.json({
+      message: 'Nhập điểm rèn luyện từ Excel hoàn tất',
+      summary: {
+        successCount: successList.length,
+        successList,
+        notFoundCount: notFoundList.length,
+        notFoundList,
+        duplicateCount: duplicateList.length,
+        duplicateList,
+        mismatchCount: mismatchList.length,
+        mismatchList,
+      },
+    });
+  } catch (error) {
+    console.error('Error in importTrainingScoresExcel:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const importFinalDRLExcel = async (req: AuthRequest, res: Response) => {
+  if (!req.file || !req.file.buffer) {
+    return res.status(400).json({ message: 'Vui lòng tải lên file Excel' });
+  }
+
+  const { semester: semesterName } = req.body;
+
+  if (!semesterName) {
+    return res.status(400).json({ message: 'Vui lòng chọn học kỳ' });
+  }
+
+  try {
+    const semName = normalizeSemesterName(semesterName);
+    
+    // Check if the semester exists
+    const semesterRecord = await prisma.semester.findUnique({
+      where: { name: semName },
+    });
+    if (!semesterRecord) {
+      return res.status(400).json({ message: `Học kỳ ${semName} không tồn tại` });
+    }
+
+    const ExcelJS = await getExcelJS();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet || worksheet.rowCount === 0) {
+      return res.status(400).json({ message: 'File Excel trống' });
+    }
+
+    let studentCodeCol = -1;
+    let yThucCol = -1;
+    let hoatDongCol = -1;
+    let kyLuatCol = -1;
+    let totalCol = -1;
+    let headerRow = 1;
+
+    for (let r = 1; r <= Math.min(worksheet.rowCount, 20); r++) {
+      const row = worksheet.getRow(r);
+      let foundHeader = false;
+      row.eachCell((cell: any, colNumber: number) => {
+        const val = cell.value;
+        let cellStr = '';
+        if (val !== null && val !== undefined) {
+          if (typeof val === 'object') {
+            if ((val as any).result !== undefined) {
+              cellStr = String((val as any).result);
+            } else if ((val as any).richText) {
+              cellStr = (val as any).richText.map((t: any) => t.text || '').join('');
+            } else {
+              cellStr = String(val);
+            }
+          } else {
+            cellStr = String(val);
+          }
+        } else {
+          cellStr = cell.text || '';
+        }
+
+        const cellVal = cellStr.trim().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        if (
+          cellVal.includes('mssv') || 
+          cellVal.includes('ma so') || 
+          cellVal.includes('ma sinh vien') || 
+          cellVal.includes('ma sv') ||
+          cellVal.includes('student code')
+        ) {
+          studentCodeCol = colNumber;
+          foundHeader = true;
+        } else if (
+          cellVal.includes('y thuc') || 
+          cellVal === 'yt' ||
+          cellVal.includes('y thuc hoc tap') || 
+          cellVal.includes('hoc tap') ||
+          cellVal.includes('admin_y_thuc')
+        ) {
+          yThucCol = colNumber;
+        } else if (
+          cellVal.includes('hoat dong') || 
+          cellVal === 'hd' ||
+          cellVal.includes('hoat dong xa hoi') || 
+          cellVal.includes('admin_hoat_dong')
+        ) {
+          hoatDongCol = colNumber;
+        } else if (
+          cellVal.includes('ky luat') || 
+          cellVal === 'kl' ||
+          cellVal.includes('y thuc ky luat') || 
+          cellVal.includes('admin_ky_luat')
+        ) {
+          kyLuatCol = colNumber;
+        } else if (
+          cellVal.includes('tong') || 
+          cellVal.includes('tong diem') || 
+          cellVal.includes('drl') || 
+          cellVal.includes('diem ren luyen') ||
+          cellVal === 'total' ||
+          cellVal.includes('admin_total')
+        ) {
+          totalCol = colNumber;
+        }
+      });
+
+      if (foundHeader) {
+        headerRow = r;
+        break;
+      }
+    }
+
+    if (studentCodeCol === -1) {
+      studentCodeCol = 1; // Fallback to column 1
+    }
+
+    const rowsToProcess: { studentCode: string; yThuc: number; hoatDong: number; kyLuat: number; total?: number }[] = [];
+    for (let r = headerRow + 1; r <= worksheet.rowCount; r++) {
+      const row = worksheet.getRow(r);
+      const mssvVal = row.getCell(studentCodeCol).value;
+      const mssv = mssvVal ? String(mssvVal).trim() : '';
+      if (!mssv) continue;
+
+      // Skip header variations
+      const mssvNormalized = mssv.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+      if (
+        mssvNormalized === 'mssv' ||
+        mssvNormalized === 'masinhvien' ||
+        mssvNormalized === 'masovien' ||
+        mssvNormalized === 'masv' ||
+        mssvNormalized === 'studentcode' ||
+        mssvNormalized === 'maso'
+      ) {
+        continue;
+      }
+
+      let yThuc = 0;
+      if (yThucCol !== -1) {
+        const val = row.getCell(yThucCol).value;
+        yThuc = val ? Math.max(0, Math.min(20, Number(val) || 0)) : 0;
+      }
+
+      let hoatDong = 0;
+      if (hoatDongCol !== -1) {
+        const val = row.getCell(hoatDongCol).value;
+        hoatDong = val ? Math.max(0, Math.min(45, Number(val) || 0)) : 0;
+      }
+
+      let kyLuat = 0;
+      if (kyLuatCol !== -1) {
+        const val = row.getCell(kyLuatCol).value;
+        kyLuat = val ? Math.max(0, Math.min(35, Number(val) || 0)) : 0;
+      }
+
+      let total: number | undefined = undefined;
+      if (totalCol !== -1) {
+        const val = row.getCell(totalCol).value;
+        if (val !== null && val !== undefined) {
+          total = Math.max(0, Math.min(100, Number(val) || 0));
+        }
+      }
+
+      rowsToProcess.push({ studentCode: mssv, yThuc, hoatDong, kyLuat, total });
+    }
+
+    if (rowsToProcess.length === 0) {
+      return res.status(400).json({ message: 'Không tìm thấy dữ liệu MSSV trong file' });
+    }
+
+    const role = String(req.user?.role || '').toUpperCase();
+    const bchClassId = String(req.user?.class_id || '').trim().toUpperCase();
+
+    const successList: string[] = [];
+    const notFoundList: string[] = [];
+    const mismatchList: string[] = [];
+
+    // BULK RETRIEVAL OPTIMIZATION
+    const studentCodes = rowsToProcess.map(item => item.studentCode);
+    
+    // 1. Fetch students in bulk
+    const students = await prisma.student.findMany({
+      where: { student_code: { in: studentCodes } }
+    });
+    
+    const studentMap = new Map(students.map(s => [s.student_code, s]));
+
+    // 2. Fetch existing scores in bulk
+    const studentIds = students.map(s => s.id);
+    const existingScores = await (prisma.trainingScore as any).findMany({
+      where: {
+        student_id: { in: studentIds },
+        semester_id: semName
+      }
+    });
+
+    const scoreMap = new Map(existingScores.map((s: any) => [s.student_id, s]));
+
+    // 3. Process in batches
+    const batchSize = 15;
+    for (let i = 0; i < rowsToProcess.length; i += batchSize) {
+      const batch = rowsToProcess.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (item) => {
+          const student = studentMap.get(item.studentCode);
+          if (!student) {
+            notFoundList.push(item.studentCode);
+            return;
+          }
+
+          if (role === 'BCH' && String(student.class_id || '').trim().toUpperCase() !== bchClassId) {
+            mismatchList.push(item.studentCode);
+            return;
+          }
+
+          const existingScore: any = scoreMap.get(student.id);
+
+          const finalTotal = item.total !== undefined ? item.total : Math.min(100, item.yThuc + item.hoatDong + item.kyLuat);
+
+          if (existingScore) {
+            await (prisma as any).$executeRaw`
+              UPDATE "TrainingScore"
+              SET 
+                y_thuc = ${item.yThuc},
+                hoat_dong = ${item.hoatDong},
+                ky_luat = ${item.kyLuat},
+                total = ${finalTotal},
+                admin_y_thuc = ${item.yThuc},
+                admin_hoat_dong = ${item.hoatDong},
+                admin_ky_luat = ${item.kyLuat},
+                admin_total = ${finalTotal},
+                status = 'APPROVED',
+                admin_notes = 'Imported final DRL from Excel',
+                "updatedAt" = NOW()
+              WHERE id = ${existingScore.id}
+            `;
+          } else {
+            await (prisma.trainingScore as any).create({
+              data: {
+                student_id: student.id,
+                semester_id: semName,
+                y_thuc: item.yThuc,
+                hoat_dong: item.hoatDong,
+                ky_luat: item.kyLuat,
+                total: finalTotal,
+                admin_y_thuc: item.yThuc,
+                admin_hoat_dong: item.hoatDong,
+                admin_ky_luat: item.kyLuat,
+                admin_total: finalTotal,
+                status: 'APPROVED',
+                admin_notes: 'Imported final DRL from Excel',
+              },
+            });
+          }
+
+          successList.push(item.studentCode);
+        })
+      );
+    }
+
+    await writeActivityLog(req, {
+      action: 'DRL_FINAL_BULK_IMPORT',
+      category: 'DRL',
+      targetType: 'TrainingScore',
+      summary: `Nhap file Excel diem DRL cuoi cung cho hoc ky ${semName}`,
+      details: {
+        semester: semName,
+        successCount: successList.length,
+        notFoundCount: notFoundList.length,
+        mismatchCount: mismatchList.length,
+      },
+    });
+
+    return res.json({
+      message: 'Nhập điểm rèn luyện cuối cùng từ Excel hoàn tất',
+      summary: {
+        successCount: successList.length,
+        successList,
+        notFoundCount: notFoundList.length,
+        notFoundList,
+        mismatchCount: mismatchList.length,
+        mismatchList,
+      },
+    });
+  } catch (error) {
+    console.error('Error in importFinalDRLExcel:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+

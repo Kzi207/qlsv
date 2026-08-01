@@ -18,6 +18,7 @@ const QRScannerCheckIn = lazy(() => import('./pages/QRScannerCheckIn'));
 const StudentEvaluation = lazy(() => import('./pages/StudentEvaluation'));
 const StudentEvidence = lazy(() => import('./pages/StudentEvidence'));
 const AdminEvidenceReview = lazy(() => import('./pages/AdminEvidenceReview'));
+const AdminEvidenceImport = lazy(() => import('./pages/AdminEvidenceImport'));
 const AccountManagement = lazy(() => import('./pages/AccountManagement'));
 const AdminDRLManagement = lazy(() => import('./pages/AdminDRLManagement'));
 const Classes = lazy(() => import('./pages/Classes'));
@@ -101,6 +102,7 @@ function App() {
             <Route path="training/approval" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><TrainingScoreApproval /></RoleRoute>} />
             <Route path="training/statistics" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><TrainingStatistics /></RoleRoute>} />
             <Route path="evidence/review" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><AdminEvidenceReview /></RoleRoute>} />
+            <Route path="evidence/import-excel" element={<RoleRoute allowedRoles={['ADMIN', 'BCH']}><AdminEvidenceImport /></RoleRoute>} />
 
             {/* ADMIN ONLY ROUTES */}
             <Route path="bch" element={<RoleRoute allowedRoles={['ADMIN']}><BCHManagement /></RoleRoute>} />
